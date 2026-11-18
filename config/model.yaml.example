@@ -1,0 +1,14 @@
+# endpoint accepts the FULL /v1/chat/completions URL or a /v1 base URL.
+# Copy to model.yaml. Do not put credentials in this file.
+provider: openai_compatible
+endpoint: http://your-internal-host:8080/v1/chat/completions
+model: nemotron
+api_key: $LLM_API_KEY
+# For a service with NO authentication: api_key: ""
+temperature: 0.2
+timeout: 180
+connect_timeout: 10
+max_retries: 2
+max_tokens: 4096
+tool_mode: native  # native | json (explicit fallback) | disabled (chat only)
+trust_env: true   # honor company HTTP(S)_PROXY / NO_PROXY and certificate environment

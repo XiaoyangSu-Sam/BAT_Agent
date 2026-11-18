@@ -1,0 +1,9 @@
+workspace_root: ./workspace
+python_executable: "" # empty = Python running this server
+timeout: 120
+max_steps: 24
+max_context_chars: 120000
+max_output_chars: 16000
+# execution: file edits auto; ask for each script/notebook/command
+# all: ask for edits too; trusted: execute without prompts on your machine
+approval_mode: execution
