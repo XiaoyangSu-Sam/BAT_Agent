@@ -1,5 +1,9 @@
 # User guide — BAT Agent 0.5
 
+## Explore before connecting
+
+On the connection page choose **Open workspace without a model**. Files, editing, folder selection and registered Skills are available immediately. The page clearly shows that no model is connected. Connect to chat opens settings later without discarding an unsent prompt. Reload preserves this choice for the current browser session. This is not fake/demo mode and makes no model requests.
+
 ## Your workspace
 
 The left explorer lists the active workspace. Open a file to read or edit it in the center. Use the explorer’s New file button for a new path, or Open workspace to select an existing folder by its full path on this computer.

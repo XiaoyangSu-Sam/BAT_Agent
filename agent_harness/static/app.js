@@ -10,7 +10,7 @@ async function enterWorkbench(){
 async function send(event){
  event?.preventDefault();if(busy)return;const prompt=$("prompt").value.trim();if(!prompt)return;
  if(hasDirty()){error("Save your open files so the agent can work with your latest changes.");return;}
- if(!$("model").value){showConnection(true);return;}
+ if(!$("model").value){showConnection(false);return;}
  error("");setBusy(true);communication("sending","Submitting your message…");
  try{if(!sessionId){const created=await api("/sessions",{title:prompt.slice(0,60)});sessionId=created.id;localStorage.setItem("bat.session",sessionId);}
  const context=[];if(activePath&&$("attachFile").checked)context.push("Current file："+activePath+". Use read_file to inspect its content.");
@@ -47,5 +47,5 @@ function initAppEvents(){
  $("export").onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({run_id:runId,events},null,2)],{type:"application/json"}));const a=el("a");a.href=url;a.download="bat-run-"+(runId||"empty")+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 }
 (async()=>{try{initEditor();initWorkspaceEvents();initConnectionEvents();initAppEvents();config=await api("/config");$("boot").classList.add("hidden");showConfig();
- if(config.setup_required)showConnection(true);else await enterWorkbench();
+ if(config.setup_required&&sessionStorage.getItem("bat.preview")!=="true")showConnection(true);else await enterWorkbench();
  }catch(e){$("boot").classList.remove("hidden");$("boot").textContent="Unable to open workspace: "+e.message;}})();

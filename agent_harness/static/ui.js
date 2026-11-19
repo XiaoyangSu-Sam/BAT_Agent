@@ -22,13 +22,15 @@ function addMessage(role,content,reasoning){
 function scrollChat(){$("messages").scrollTop=$("messages").scrollHeight;}
 function setBusy(value){
  busy=value;for(const id of ["send","model","newSession","sessions","settingsButton","newFile","openFolder","folderActivity","emptyOpenFolder","refreshSkills","diagnose"])$(id).disabled=value;
- $("cancel").classList.toggle("hidden",!value);$("thinking").classList.toggle("hidden",!value);if(window.editorReady)editor.readOnly(value);updateEditorStatus();
+ $("cancel").classList.toggle("hidden",!value);$("thinking").classList.toggle("hidden",!value);if(window.editorReady)editor.readOnly(value);$("diagnose").disabled=value||!$("model").value;$("connectFromWorkspace").disabled=value;updateEditorStatus();
 }
 function showConfig(){
  const selected=$("model").value;$("model").replaceChildren();
  for(const m of config.models){const o=el("option",m.model+(m.id!=="default"?" · "+m.id:""));o.value=m.id;o.disabled=!m.ready;$("model").append(o);}
  const wanted=config.models.find(m=>m.id===selected&&m.ready)||config.models.find(m=>m.id===config.default_model&&m.ready)||config.models.find(m=>m.ready);
- $("model").value=wanted?.id||"";const project=config.workspace.split(/[\\/]/).filter(Boolean).pop()||"workspace";
+ if(!wanted){const option=el("option","No model connected");option.value="";$("model").prepend(option);}
+ $("model").value=wanted?.id||"";$("modelNotice").classList.toggle("hidden",!!wanted);$("diagnose").disabled=busy||!wanted;
+ const project=config.workspace.split(/[\\/]/).filter(Boolean).pop()||"workspace";
  $("projectName").textContent=project;$("workspaceLabel").textContent="⌄  "+project.toUpperCase();$("workspaceLabel").title=config.workspace;
  $("policy").textContent={execution:"Approve execution",all:"Approve changes and execution",trusted:"Auto-execute"}[config.execution.approval_mode];showProvider();
 }

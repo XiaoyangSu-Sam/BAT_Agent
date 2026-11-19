@@ -25,6 +25,7 @@ function showConnection(required=false){
  const current=config.models.find(m=>m.id===$("model").value)||config.models.find(m=>m.id===config.default_model);
  $("savedConnection").replaceChildren(el("option","New connection…"));$("savedConnection").firstChild.value="";
  for(const m of config.models.filter(m=>m.provider!=="fake")){const option=el("option",m.model+" · "+m.id);option.value=m.id;$("savedConnection").append(option);}
+ $("previewWorkspace").classList.toggle("hidden",!config.setup_required);document.querySelector(".preview-note").classList.toggle("hidden",!config.setup_required);
  fillConnection(current);$("connectionTitle").textContent=required?"Connect your model":"Model connection settings";
  $("connectionClose").classList.toggle("hidden",required);$("connectionScreen").classList.remove("hidden");
  if(required)$("workbench").classList.add("hidden");$("endpoint").focus();
@@ -41,6 +42,12 @@ function renderConnectionReport(result,failed=false){
  el("pre",JSON.stringify(result,null,2)));host.append(detail);
 }
 function initConnectionEvents(){
+ $("previewWorkspace").onclick=async()=>{
+ connectionVersion++;$("apiKey").value="";sessionStorage.setItem("bat.preview","true");
+ $("connectionScreen").classList.add("hidden");
+ try{await enterWorkbench();}catch(e){error(e.message);}
+ };
+ $("connectFromWorkspace").onclick=()=>showConnection(false);
  $("connectionForm").oninput=invalidateConnection;$("connectionForm").onchange=invalidateConnection;
  $("endpoint").addEventListener("input",()=>{$("discoveredModels").classList.add("hidden");$("discoveryHelp").textContent="Endpoint changed. Find models again to refresh the list.";$("reuseKey").checked=false;$("reuseKeyLabel").classList.add("hidden");});
  $("connectionId").addEventListener("input",()=>{$("reuseKey").checked=false;$("reuseKeyLabel").classList.add("hidden");});

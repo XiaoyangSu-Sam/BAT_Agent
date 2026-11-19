@@ -65,7 +65,7 @@ function initWorkspaceEvents(){
  $("textDialogClose").onclick=()=>$("textDialog").close();
  $("textDialogForm").onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector(".primary");button.disabled=true;try{await dialogAction($("textDialogInput").value.trim());$("textDialog").close();}catch(err){$("textDialogError").textContent=err.message;$("textDialogError").classList.remove("hidden");}finally{button.disabled=false;}};
  window.addEventListener("beforeunload",e=>{if(hasDirty()){e.preventDefault();e.returnValue="";}});
- window.addEventListener("focus",()=>{if(config&&!config.setup_required&&!busy)syncOpenFiles().catch(()=>{});});
+ window.addEventListener("focus",()=>{if(config&&!$("workbench").classList.contains("hidden")&&!busy)syncOpenFiles().catch(()=>{});});
  document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveActive().catch(err=>error(err.message));}});
  function resize(handle,move){handle.onpointerdown=e=>{handle.setPointerCapture(e.pointerId);const listener=event=>move(event);handle.onpointermove=listener;handle.onpointerup=()=>{handle.onpointermove=null;};};}
  resize($("sidebarResize"),e=>document.documentElement.style.setProperty("--sidebar-width",Math.max(280,Math.min(window.innerWidth*.5,e.clientX-48))+"px"));
