@@ -20,3 +20,14 @@ Backup JSON records support manual inspection; no automatic workspace rollback i
 
 There are no telemetry calls, external frontend CDNs, or hardcoded company URLs. Installing dependencies uses
 your configured package source. Model requests go to the endpoint configured by the user.
+
+## Publishing source
+
+Keep real endpoints, model credentials, private Skills, workspace contents and conversation history local.
+The ignore rules exclude local model YAML, environment files, common key files, logs, databases and Git bundles.
+Examples must contain placeholders only. Ignore rules do not remove files already tracked by Git.
+
+Before publishing, review staged files and Git author/committer identity, and scan the full history with a secret scanner.
+Use a publishing identity and a no-reply email if you do not want personal details in public commits.
+The release packaging script includes source and example configuration only; inspect any added source or documentation
+for private values before packaging. Store audit reports and recovery backups outside the public repository.
