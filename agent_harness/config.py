@@ -21,6 +21,7 @@ class ModelConfig(BaseModel):
     max_tokens: int = Field(default=4096, gt=0, le=131072)
     tool_mode: Literal["native", "json", "disabled"] = "native"
     trust_env: bool = True
+    context_window: int | None = Field(default=None, ge=1024, le=10000000)
 
     def secret(self):
         value = self.api_key
@@ -112,9 +113,20 @@ class Settings:
         return self.models[key].model_copy(deep=True)
 
     def public(self):
-        return {"models": [{"id": k, "model": v.model, "provider": v.provider,
+        def ready(model):
+            try:
+                if model.provider != "fake":
+                    model.url()
+                    model.secret()
+                return True
+            except HarnessError:
+                return False
+        return {"models": [{**v.model_dump(exclude={"api_key"}), "id": k, "model": v.model, "provider": v.provider,
                             "tool_mode": v.tool_mode, "endpoint": v.endpoint,
-                            "credential_configured": bool(v.api_key)}
+                            "credential_configured": bool(v.api_key),
+                            "credential_env": v.api_key.lstrip("$").strip("{}") if v.api_key.startswith("$") else "",
+                            "ready": ready(v), "context_window": v.context_window}
                            for k, v in self.models.items()],
                 "default_model": self.default_model,
+                "setup_required": not any(ready(m) for m in self.models.values()),
                 "workspace": str(self.workspace), "execution": self.execution.model_dump()}

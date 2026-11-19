@@ -13,15 +13,22 @@ async def run_turn(run_id, session_id, messages, config, tools, skills, executio
                 *wire_messages(messages, config.tool_mode)]
         if config.tool_mode == "json":
             wire[0]["content"] += "\nTools:\n" + json.dumps(schemas)
-        if len(json.dumps(wire)) + len(json.dumps(schemas)) > execution.max_context_chars:
+        chars = len(json.dumps(wire)) + len(json.dumps(schemas))
+        await emit("context_usage", {"model":config.model, "model_context_window":config.context_window,
+                   "characters":chars, "character_limit":execution.max_context_chars})
+        if chars > execution.max_context_chars:
             raise HarnessError("context_limit", "Context limit reached. Start a fresh session with a focused task.", "context")
         await emit("step", {"number":step+1, "limit":execution.max_steps})
         reply = await client.complete(wire, schemas, emit, tools=config.tool_mode!="disabled")
+        if reply.get("_usage"):
+            await emit("token_usage", {"model":config.model, "model_context_window":config.context_window, **reply["_usage"]})
+        reasoning = reply.get("_reasoning")
+        await emit("reasoning", {"content":reasoning, "available":bool(reasoning)})
         calls = reply.get("tool_calls", [])
         text = reply.get("content")
         if config.tool_mode == "json":
             text, calls = json_action(reply)
-            reply = {"role":"assistant","content":text}
+            reply = {"role":"assistant","content":text, "_reasoning":reasoning}
             if calls:
                 reply["tool_calls"] = calls
         if config.tool_mode == "disabled" and calls:

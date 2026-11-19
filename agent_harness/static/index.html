@@ -1,69 +1,51 @@
 <!doctype html>
-<html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="harness-token" content="__HARNESS_TOKEN__">
-<title>Agent Harness · Local workspace</title><link rel="stylesheet" href="/static/style.css"></head>
-<body>
-<aside class="sidebar">
-  <div class="brand"><span class="mark">H</span><div>HARNESS<small>YOUR LOCAL WORKSPACE</small></div></div>
-  <button id="newSession" class="primary">＋ 新建任务</button>
-  <div class="label">任务记录</div><nav id="sessions"></nav>
-  <div class="sidebar-bottom"><span class="dot"></span> 本地运行 · v0.3.0<small>代码与执行记录保存在本机</small></div>
-</aside>
-<main>
-  <header><div><span class="eyebrow">BUILD WITH YOUR MODEL</span><h1>把想法变成实际改动</h1></div>
-    <button id="settingsButton" class="secondary">模型设置</button></header>
-  <div class="toolbar"><label for="model">当前模型</label><select id="model"></select>
-    <span id="providerBadge" class="badge">未连接</span><button id="diagnose">检测连接与工具</button></div>
-  <div id="error" class="error hidden" role="alert"></div>
-  <div class="workspace"><span>工作目录</span><code id="workspace"></code><span id="policy" class="muted"></span></div>
-  <section class="panels">
-    <section class="conversation">
-      <div id="messages" aria-live="polite"></div>
-      <div id="welcome" class="welcome"><div class="hero-icon">⌘</div><h2>从一个具体任务开始</h2>
-        <p>读取项目、修改代码、运行验证。每一步都能看到结果。</p>
-        <button id="demo" class="example">运行离线演示 <span>写一个 Python 脚本 → 执行 → 读取结果</span></button>
-        <p class="hint">真实模型下，可以输入「查看这个目录，说明项目结构」。</p>
-      </div>
-      <div id="approval" class="approval hidden"><strong>等待你批准本地操作</strong><pre id="approvalText"></pre>
-        <p>该操作使用当前系统账户运行。请核对命令和文件路径。</p>
-        <button id="approve" class="primary">批准这一次</button><button id="deny">拒绝并停止</button></div>
-      <form id="composer"><label class="sr-only" for="prompt">任务指令</label>
-        <textarea id="prompt" placeholder="描述要完成的工作…（Ctrl + Enter 发送）" rows="3" required></textarea>
-        <div class="composer-footer"><span id="runStatus">就绪</span><div>
-          <button id="cancel" type="button" class="hidden">停止</button><button id="send" class="primary">开始执行 ↗</button>
-        </div></div>
-      </form>
-    </section>
-    <aside class="inspector"><div class="inspector-head"><h2>执行记录</h2><button id="export">导出</button></div>
-      <p class="hint">文件改动、命令输出、错误和重试会显示在这里。</p><div id="events"></div>
-      <details class="skills"><summary>可用 Skills <span id="skillCount">0</span></summary>
-        <div id="skills"></div><button id="refreshSkills">刷新目录</button></details>
-    </aside>
-  </section>
-</main>
-<dialog id="settingsDialog">
-  <form id="modelForm">
-    <div class="dialog-head"><h2>连接你的模型</h2><button type="button" id="closeSettings">关闭</button></div>
-    <p class="hint">支持完整 Chat Completions 地址或 /v1 地址。设置保存在本机。</p>
-    <label>连接名称<input name="id" value="internal" pattern="[A-Za-z0-9_-]{1,60}" required></label>
-    <label>Endpoint<input name="endpoint" type="url" placeholder="http://your-host:8080/v1/chat/completions" required></label>
-    <label>Model<input name="model" value="nemotron" required></label>
-    <label>认证方式<select name="auth_mode" id="authMode"><option value="none">接口不需要认证</option>
-      <option value="env">从环境变量读取</option><option value="session">仅本次运行使用密钥</option></select></label>
-    <label id="envField" class="hidden">密钥环境变量<input name="api_key_env" value="LLM_API_KEY"></label>
-    <label id="keyField" class="hidden">API key（不会保存到文件）<input name="session_api_key" type="password" autocomplete="off"></label>
-    <label>工具调用方式<select name="tool_mode"><option value="native">原生工具调用（优先）</option>
-      <option value="json">JSON 协议（原生不支持时手动选择）</option><option value="disabled">仅聊天</option></select></label>
-    <div class="two"><label>请求超时（秒）<input name="timeout" type="number" value="180" min="1" max="1800"></label>
-      <label>Temperature<input name="temperature" type="number" value="0.2" min="0" max="2" step="0.1"></label></div>
-    <label class="check"><input name="trust_env" type="checkbox" checked>使用系统代理与证书环境配置</label>
-    <p id="formError" class="error hidden" role="alert"></p>
-    <button class="primary" id="saveModel">保存连接</button>
-  </form>
-</dialog>
-<dialog id="diagnosticDialog"><div class="dialog-head"><h2>连接诊断</h2><button id="closeDiagnostic">关闭</button></div>
-  <p id="diagnosticStatus">检测中…</p><pre id="diagnosticResult"></pre></dialog>
-<script src="/static/ui.js" defer></script>
-<script src="/static/app.js" defer></script>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="harness-token" content="__HARNESS_TOKEN__"><title>BAT Agent — Coding workspace</title>
+<link rel="stylesheet" href="/static/style.css"></head><body>
+<div id="boot">Opening BAT Agent…</div>
+<section id="connectionScreen" class="connection hidden" aria-label="Model connection">
+ <div class="connect-brand"><div class="wordmark"><span class="bat-mark">B</span> BAT Agent</div><div class="brand-copy"><div class="eyebrow">YOUR LOCAL CODING WORKSPACE</div><h1>From an idea,<br>to working code.</h1><p>Your files, code editor and AI conversation.<br>One place to build together.</p><div class="connection-sketch"><div class="sketch-dots">● ● ● <span>workspace / main.py</span></div><pre><span class="syntax-purple">def</span> <span class="syntax-blue">build_something</span>():
+    idea = <span class="syntax-green">"start here"</span>
+    <span class="syntax-purple">return</span> collaborate(idea)</pre><div class="sketch-message">✧ &nbsp; Let’s build it together.</div></div></div><small>BAT HARNESS · RUNS LOCALLY</small></div>
+ <div class="connect-main"><button id="connectionClose" class="icon-btn close-connect hidden" aria-label="Close model settings">×</button><form id="connectionForm" class="connect-form">
+  <div class="eyebrow">MODEL CONNECTION</div><h2 id="connectionTitle">Connect your model</h2><p class="muted">Connect your model service to start working.</p>
+  <label>Saved connections<select id="savedConnection"><option value="">New connection…</option></select></label>
+  <label>Endpoint <span class="required">*</span><input id="endpoint" type="url" required placeholder="http://your-server:8080/v1/chat/completions" spellcheck="false" autocomplete="off"></label>
+  <label>API Key <span class="optional">optional</span><input id="apiKey" type="password" placeholder="Leave blank if your service needs no key" autocomplete="off"></label>
+  <label id="reuseKeyLabel" class="context-check hidden"><input id="reuseKey" type="checkbox"> Use the key already saved for this connection</label>
+  <div class="discovery-row"><button id="findModels" type="button" class="secondary">Find models</button><span id="discoveryHelp" class="muted">Choose from your service’s available models.</span></div>
+  <select id="discoveredModels" class="hidden" aria-label="Available models"></select>
+  <label>Model name <span class="required">*</span><input id="modelName" required placeholder="e.g. nemotron" spellcheck="false" autocomplete="off"></label>
+  <details class="advanced"><summary>Advanced settings</summary><label>Connection name<input id="connectionId" value="default" pattern="[A-Za-z0-9_-]{1,60}" required></label><label>Tool protocol<select id="toolMode"><option value="native">Native tool calling</option><option value="json">JSON protocol</option><option value="disabled">Chat only</option></select></label><label>Read API key from an environment variable (optional)<input id="keyEnv" placeholder="e.g. LLM_API_KEY" pattern="[A-Za-z_][A-Za-z0-9_]*"></label><label>Model context window (tokens, optional)<input id="contextWindow" type="number" min="1024" max="10000000" placeholder="Only if confirmed by your service"></label><small>A key entered here stays in memory until the server stops.</small></details>
+  <div id="connectionResult" class="connection-result hidden" role="status"></div>
+  <div class="connect-actions"><button id="testConnection" type="button" class="secondary">Test connection</button><button id="enterWorkspace" type="submit" class="primary" disabled>Open workspace <span>→</span></button></div>
+  <p class="connect-footnote">This sends a real request to your endpoint. No key means no Authorization header.</p>
+ </form></div>
+</section>
+<div id="workbench" class="workbench hidden">
+ <header class="titlebar"><div class="wordmark"><span class="bat-mark">B</span> BAT Agent <span class="quiet">/</span><span id="projectName">workspace</span></div><div class="title-center">⌘ &nbsp; Coding workspace</div><div class="title-actions"><span id="providerBadge" class="provider-badge"></span><button id="settingsButton" class="icon-btn" title="Model connection settings" aria-label="Model connection settings">⚙</button></div></header>
+ <div class="work-area">
+  <nav class="activitybar" aria-label="Workspace navigation"><button id="filesActivity" class="activity active" title="Files and conversation" aria-label="Files and conversation">▱</button><button id="chatActivity" class="activity" title="Focus conversation" aria-label="Focus conversation">▤</button><button id="skillsToggle" class="activity" title="Registered Skills" aria-label="Registered Skills">✧</button><div class="rail-spacer"></div><button id="folderActivity" class="activity" title="Open folder" aria-label="Open folder">⊞</button></nav>
+  <aside id="sidebar" class="sidebar"><section class="explorer"><div class="panel-heading"><span>EXPLORER</span><div><button id="newFile" class="icon-btn" aria-label="New file" title="New file">＋</button><button id="refreshFiles" class="icon-btn" aria-label="Refresh files" title="Refresh files">↻</button><button id="openFolder" class="icon-btn" aria-label="Open workspace" title="Open workspace">…</button></div></div><div id="workspaceLabel" class="workspace-label" title="">⌄ &nbsp; WORKSPACE</div><input id="fileFilter" class="file-filter" placeholder="Find a file…" aria-label="Find a file"><div id="fileTree" class="file-tree"></div><div id="fileLimit" class="small-note hidden">Showing the first 500 files</div></section>
+   <div id="explorerResize" class="horizontal-resize" role="separator" aria-label="Resize files and conversation"></div>
+   <section class="chat-panel"><div class="panel-heading"><span>✧ &nbsp; Agent</span><button id="newSession" class="icon-btn" title="New conversation" aria-label="New conversation">＋</button></div><select id="sessions" class="session-picker" aria-label="Conversation history"><option value="">New conversation</option></select><div id="messages" class="messages" aria-live="polite"><div id="welcome" class="chat-welcome"><span>✧</span><h3>What shall we build?</h3><p>Ask a question or describe a task.<br>Your agent can read, edit and verify code.</p><button class="suggestion" data-prompt="Help me understand this project’s structure before changing any files.">Explore this project ↗</button><button class="suggestion" data-prompt="Explain the current file and point out possible issues.">Explain this code ↗</button></div></div>
+    <div id="thinking" class="thinking hidden"><i></i><span id="thinkingText">Waiting for the model…</span></div><div id="approval" class="approval hidden"><strong>Your approval is needed</strong><pre id="approvalText"></pre><div><button id="deny" class="secondary">Decline</button><button id="approve" class="primary">Approve and run</button></div></div>
+    <div id="error" class="inline-error hidden" role="alert"></div><form id="composer" class="composer"><div id="contextChips" class="context-chips"></div><textarea id="prompt" rows="3" placeholder="Describe a task, or ask about your code…" aria-label="Message to the agent"></textarea><div class="composer-footer"><label class="context-check"><input id="attachFile" type="checkbox" checked> Current file</label><span class="key-hint">Ctrl ↵</span><button id="cancel" type="button" class="stop-btn hidden">Stop</button><button id="send" class="send-btn" aria-label="Send message" title="Send message">↑</button></div></form>
+    <div class="chat-options"><label class="context-check"><input id="showReasoning" type="checkbox"> Show model reasoning</label><button id="contextGauge" class="context-gauge" type="button" aria-label="Context usage"><span>—</span></button></div>
+    <div id="contextDetails" class="context-details hidden"></div>
+    <div class="communication-row"><span id="communicationDot"></span><span id="communicationStatus">Ready · No request in progress</span></div>
+    <div class="model-row"><span>◈</span><select id="model" aria-label="Choose model"></select><button id="diagnose" class="icon-btn" aria-label="Test current model" title="Test model and tools">⏻</button></div>
+   </section>
+  </aside><div id="sidebarResize" class="vertical-resize" role="separator" aria-label="Resize sidebar"></div>
+  <main class="editor-panel"><div class="editor-header"><div id="editorTabs" class="editor-tabs" role="tablist"><span class="empty-tab">Welcome</span></div><button id="saveFile" class="text-btn" disabled>Save <kbd>Ctrl S</kbd></button></div><div class="breadcrumbs"><span id="breadcrumbs">workspace</span><span id="editorHint"></span></div><div id="fileConflict" class="file-conflict hidden"><span>This file changed on disk. Your unsaved draft is preserved.</span><button id="reloadFile" class="text-btn">Reload from disk</button></div><div id="editorEmpty" class="editor-empty"><div class="editor-glyph">⌘</div><h2>Your coding workspace</h2><p>Open a file on the left, or start a task in the conversation.</p><button id="emptyOpenFolder" class="secondary">Open folder</button><div class="shortcut-row"><span>Save file <kbd>Ctrl S</kbd></span><span>Find in file <kbd>Ctrl F</kbd></span></div></div><div id="editorHost" class="editor-host hidden"></div>
+   <section id="bottomPanel" class="bottom-panel"><div class="bottom-tabs"><button data-panel="output" class="active">Output</button><button data-panel="changes">Changes <span id="changeCount">0</span></button><button data-panel="events">Activity</button><div class="rail-spacer"></div><button id="export" class="icon-btn" aria-label="Export activity" title="Export activity">↓</button></div><pre id="output" class="output">Process output will appear here.</pre><div id="changes" class="changes hidden"></div><div id="events" class="events hidden"></div></section>
+  </main>
+  <aside id="skillsPanel" class="skills-panel hidden"><div class="panel-heading"><span>✧ &nbsp; Registered Skills <span id="skillCount" class="count">0</span></span><div><button id="refreshSkills" class="icon-btn" aria-label="Refresh Skills">↻</button><button id="closeSkills" class="icon-btn" aria-label="Close Skills">×</button></div></div><p class="skills-intro">Available in your local registry. Read the instructions or add a Skill to this conversation.</p><div id="skills"></div></aside>
+ </div>
+ <footer class="statusbar"><span class="status-brand">⌁ &nbsp; BAT</span><span id="runStatus">Ready</span><span id="policy"></span><div class="rail-spacer"></div><span id="cursorStatus">Ln 1, Col 1</span><span id="encodingStatus">UTF-8</span><span id="languageStatus">Plain Text</span></footer>
+</div>
+<dialog id="textDialog"><form id="textDialogForm"><div class="dialog-head"><h3 id="textDialogTitle"></h3><button type="button" id="textDialogClose" class="icon-btn" aria-label="Close">×</button></div><p id="textDialogHint" class="muted"></p><input id="textDialogInput" required autocomplete="off"><div id="textDialogError" class="inline-error hidden"></div><button class="primary">Confirm</button></form></dialog>
+<dialog id="skillDialog"><div class="dialog-head"><h3 id="skillTitle"></h3><button id="closeSkill" class="icon-btn" aria-label="Close Skill instructions">×</button></div><pre id="skillInstructions"></pre></dialog>
+<dialog id="diagnosticDialog"><div class="dialog-head"><h3>Model connection diagnostics</h3><button id="closeDiagnostic" class="icon-btn" aria-label="Close diagnostics">×</button></div><p id="diagnosticStatus"></p><pre id="diagnosticResult"></pre></dialog>
+<script src="/static/editor.bundle.js"></script><script src="/static/markdown.bundle.js"></script><script src="/static/ui.js"></script><script src="/static/workspace.js"></script><script src="/static/connection.js"></script><script src="/static/app.js"></script>
 </body></html>

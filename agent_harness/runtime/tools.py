@@ -35,6 +35,9 @@ class ToolRegistry:
             {"skill_id":path}, ["skill_id"], skills.read_skill)
         add("read_skill_resource", "Read a skill resource relative to its own directory.",
             {"skill_id":path,"path":path}, ["skill_id","path"], skills.read_skill_resource)
+        add("write_skill_file", "Create or update SKILL.md or a skill resource. Existing files require SHA256 from read_skill/read_skill_resource. Registers valid skills immediately.",
+            {"skill_id":string(80,1), "path":path, "content":string(1000000), "expected_sha256":sha},
+            ["skill_id","path","content"], skills.write_skill_file, "write")
         args = {"type":"array","items":string(10000),"maxItems":100}
         add("run_python_script", "Execute Python in the workspace, optionally from an installed skill's scripts/.",
             {"path":path,"args":args,"skill_id":string(200)}, ["path"],

@@ -12,3 +12,6 @@ max_retries: 2
 max_tokens: 4096
 tool_mode: native  # native | json (explicit fallback) | disabled (chat only)
 trust_env: true   # honor company HTTP(S)_PROXY / NO_PROXY and certificate environment
+
+# Optional verified capacity (tokens), used by the context ring.
+# context_window: 32768

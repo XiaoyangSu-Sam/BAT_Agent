@@ -5,11 +5,11 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.3.0"
+VERSION = "0.5.0"
 PREFIX = "agent-harness-baseline"
 ROOT_FILES = (
     "README.md", "README.zh-CN.md", "AGENTS.md", "SECURITY.md", "CHANGELOG.md",
-    "pyproject.toml", "uv.lock", ".python-version", ".gitignore",
+    "pyproject.toml", "uv.lock", ".python-version", ".gitignore", ".gitattributes",
 )
 def digest(data):
     return hashlib.sha256(data).hexdigest()
@@ -19,11 +19,11 @@ def main():
     paths.update((ROOT / "config").glob("*.yaml.example"))
     paths.add(ROOT / "workspace/README.md")
     paths.add(ROOT / "skills/local-coding/SKILL.md")
-    extensions = {".py", ".md", ".html", ".css", ".js", ".cjs"}
-    for directory in ("agent_harness", "docs", "scripts"):
+    extensions = {".py", ".md", ".html", ".css", ".js", ".cjs", ".mjs", ".json", ".txt"}
+    for directory in ("agent_harness", "docs", "scripts", "web"):
         paths.update(p for p in (ROOT / directory).rglob("*")
                      if p.is_file() and p.suffix in extensions
-                     and not any(part.startswith(".") or part == "__pycache__"
+                     and not any(part.startswith(".") or part in ("__pycache__", "node_modules")
                                  for part in p.relative_to(ROOT).parts))
     payloads = {}
     for path in sorted(paths):

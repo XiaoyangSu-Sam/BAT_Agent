@@ -1,0 +1,79 @@
+"use strict";
+let testedConnection=null,connectionVersion=0,testingConnection=false,discoveredModels=[];
+function connectionValue(){
+ const secret=$("apiKey").value,env=$("keyEnv").value.trim(),existing=config.models.find(m=>m.id===$("savedConnection").value);
+ return {id:$("connectionId").value.trim(),endpoint:$("endpoint").value.trim(),model:$("modelName").value.trim(),
+ auth_mode:secret?"session":env?"env":$("reuseKey").checked?"saved":"none",session_api_key:secret,api_key_env:env||"LLM_API_KEY",
+ tool_mode:$("toolMode").value,temperature:existing?.temperature??0.2,timeout:existing?.timeout??180,
+ connect_timeout:existing?.connect_timeout??10,max_retries:existing?.max_retries??2,max_tokens:existing?.max_tokens??4096,trust_env:existing?.trust_env??true,context_window:$("contextWindow").value?Number($("contextWindow").value):null};
+}
+function invalidateConnection(){connectionVersion++;testedConnection=null;$("enterWorkspace").disabled=true;$("connectionResult").classList.add("hidden");}
+function fillConnection(current){
+ invalidateConnection();const real=current?.provider!=="fake";
+ $("endpoint").value=real?current?.endpoint||"":"";
+ $("modelName").value=real?current?.model||"":"";
+ $("connectionId").value=real?current?.id||(config.models.some(m=>m.id==="default")?"connection-"+(config.models.length+1):"default"):"default";
+ $("apiKey").value="";$("keyEnv").value=current?.credential_env||"";$("toolMode").value=current?.tool_mode||"native";
+ $("contextWindow").value=current?.context_window||"";
+ $("reuseKey").checked=!!current?.ready&&!!current?.credential_configured&&!current?.credential_env;
+ $("reuseKeyLabel").classList.toggle("hidden",!$("reuseKey").checked);
+ $("savedConnection").value=real?current?.id||"":"";
+ $("discoveredModels").replaceChildren();$("discoveredModels").classList.add("hidden");
+ $("discoveryHelp").textContent="Find models fills a dropdown from your service. You can also enter a name.";
+}
+function showConnection(required=false){
+ const current=config.models.find(m=>m.id===$("model").value)||config.models.find(m=>m.id===config.default_model);
+ $("savedConnection").replaceChildren(el("option","New connection…"));$("savedConnection").firstChild.value="";
+ for(const m of config.models.filter(m=>m.provider!=="fake")){const option=el("option",m.model+" · "+m.id);option.value=m.id;$("savedConnection").append(option);}
+ fillConnection(current);$("connectionTitle").textContent=required?"Connect your model":"Model connection settings";
+ $("connectionClose").classList.toggle("hidden",required);$("connectionScreen").classList.remove("hidden");
+ if(required)$("workbench").classList.add("hidden");$("endpoint").focus();
+}
+function connectionResult(text,kind){$("connectionResult").textContent=text;$("connectionResult").className="connection-result "+kind;}
+function renderConnectionReport(result,failed=false){
+ const host=$("connectionResult");host.replaceChildren();host.className="connection-result "+(failed?"failure":"success");
+ host.append(el("strong",failed?"Connection failed — "+result.message:"Connected to "+result.model+" · "+result.elapsed_ms+" ms"));
+ if(result.http_status)host.append(el("div","HTTP "+result.http_status));
+ if(result.checks?.length){const list=el("ul");for(const c of result.checks)list.append(el("li",c.message));host.append(list);}
+ if(failed){const actions=result.suggestions||["Check the endpoint and model name, then try again."];
+ const list=el("ul");for(const action of actions)list.append(el("li",action));host.append(list);}
+ const detail=el("details");detail.append(el("summary","Technical details"),
+ el("pre",JSON.stringify(result,null,2)));host.append(detail);
+}
+function initConnectionEvents(){
+ $("connectionForm").oninput=invalidateConnection;$("connectionForm").onchange=invalidateConnection;
+ $("endpoint").addEventListener("input",()=>{$("discoveredModels").classList.add("hidden");$("discoveryHelp").textContent="Endpoint changed. Find models again to refresh the list.";$("reuseKey").checked=false;$("reuseKeyLabel").classList.add("hidden");});
+ $("connectionId").addEventListener("input",()=>{$("reuseKey").checked=false;$("reuseKeyLabel").classList.add("hidden");});
+ $("savedConnection").onchange=()=>fillConnection(config.models.find(m=>m.id===$("savedConnection").value));
+ $("discoveredModels").onchange=()=>{const item=discoveredModels.find(m=>m.id===$("discoveredModels").value);if(item){$("modelName").value=item.id;$("contextWindow").value=item.context_window||"";}invalidateConnection();};
+ $("findModels").onclick=async()=>{
+ if(!$("endpoint").reportValidity())return;
+ const value=connectionValue();value.model=value.model||"discovery";
+ const version=connectionVersion;$("findModels").disabled=true;$("discoveryHelp").textContent="Requesting available models…";
+ try{const result=await api("/models/discover",value);if(version!==connectionVersion)return;
+ discoveredModels=result.models;$("discoveredModels").replaceChildren();const option=el("option","Choose an available model…");option.value="";$("discoveredModels").append(option);
+ for(const m of discoveredModels){const option=el("option",m.id);option.value=m.id;$("discoveredModels").append(option);}
+ $("discoveredModels").classList.toggle("hidden",!discoveredModels.length);
+ $("discoveryHelp").textContent=discoveredModels.length?"Select a model below. The service supplied this list.":"No models were listed. Enter the model name from your service owner.";
+ }catch(e){if(version===connectionVersion)$("discoveryHelp").textContent=e.message+" You can still enter a model name and test it.";}
+ finally{$("findModels").disabled=false;}
+ };
+ $("connectionClose").onclick=()=>{connectionVersion++;$("apiKey").value="";$("connectionScreen").classList.add("hidden");};
+ $("testConnection").onclick=async()=>{
+ if(testingConnection||!$("connectionForm").reportValidity())return;
+ const value=connectionValue(),fingerprint=JSON.stringify(value),version=++connectionVersion;
+ testingConnection=true;testedConnection=null;$("testConnection").disabled=true;$("testConnection").textContent="Connecting…";$("enterWorkspace").disabled=true;
+ connectionResult("Testing your endpoint… This may take up to 30 seconds.","pending");
+ try{const result=await api("/models/test",value);if(version!==connectionVersion||fingerprint!==JSON.stringify(connectionValue()))return;
+ testedConnection=fingerprint;renderConnectionReport(result);$("enterWorkspace").disabled=false;
+ }catch(e){if(version===connectionVersion)renderConnectionReport(e.details||{message:e.message},true);}
+ finally{testingConnection=false;$("testConnection").disabled=false;$("testConnection").textContent="Test connection";}
+ };
+ $("connectionForm").onsubmit=async e=>{
+ e.preventDefault();const value=connectionValue();if(testedConnection!==JSON.stringify(value))return;
+ $("enterWorkspace").disabled=true;
+ try{config=await api("/models",value);$("apiKey").value="";testedConnection=null;showConfig();$("model").value=value.id;showProvider();$("connectionScreen").classList.add("hidden");await enterWorkbench();}
+ catch(err){connectionResult(err.message,"");}
+ };
+ $("settingsButton").onclick=()=>showConnection(false);
+}

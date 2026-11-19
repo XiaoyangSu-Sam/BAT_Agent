@@ -4,5 +4,6 @@ __pycache__/
 .harness/
 config/*.yaml
 .env
+node_modules/
 workspace/*
 !workspace/README.md
