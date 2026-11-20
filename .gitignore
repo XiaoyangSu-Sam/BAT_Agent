@@ -21,3 +21,8 @@ execution.yaml
 node_modules/
 workspace/*
 !workspace/README.md
+
+# Private development instructions and local Skills
+AGENTS.md
+skills/*
+!skills/local-coding/

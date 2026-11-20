@@ -56,8 +56,8 @@ Execution uses the selected workspace as cwd, not the Skill directory. Scripts s
 Notebook support is optional:
 
 ~~~powershell
-uv sync --locked --all-groups --extra notebook
-uv run --locked --extra notebook agent-harness
+python -m pip install -e ".[notebook]"
+python -m agent_harness
 ~~~
 
 Notebook output is saved separately under workspace/notebook-results/. Source notebooks are preserved. Install any Skill-specific dependencies into this project’s environment before execution.
@@ -65,3 +65,9 @@ Notebook output is saved separately under workspace/notebook-results/. Source no
 Skill ids created by the write tool use 1–80 letters/numbers/hyphens/underscores and start with a letter or number. Writes cannot escape the Skill directory or target protected files. Paths are guarded; subprocess execution still has the current user’s operating-system privileges.
 
 Existing company Skills may refer to private APIs, old tool names or absolute paths. Review those references during migration. This app does not automatically download plugins or supply missing company libraries.
+
+## Copy an existing Skill
+
+Place the complete folder directly under skills/, so its path is skills/<id>/SKILL.md. A ZIP wrapper such as skills/archive-name/<id>/SKILL.md will not register. Keep scripts/, references/ and notebooks/ alongside SKILL.md. Click Refresh Skills after copying. This registry is separate from VS Code/Copilot .github/skills/.
+
+Use config/execution.yaml to set python_executable to an approved interpreter with the Skill dependencies. The server interpreter is used when it is empty. Python Playwright is only needed for Skills that import it; it is not needed by the workbench. No npm/npx command is required by BAT Agent. Filesystem and network permissions still apply.

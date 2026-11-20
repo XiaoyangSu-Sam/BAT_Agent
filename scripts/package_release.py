@@ -1,20 +1,22 @@
-"""Build and verify a source-only archive of this baseline. Never includes local run state."""
+"""Build a source-only BAT Agent release. Never includes local runtime state."""
 import hashlib
 import json
 from pathlib import Path
+import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.5.2"
-PREFIX = "agent-harness-baseline"
 ROOT_FILES = (
-    "README.md", "README.zh-CN.md", "AGENTS.md", "SECURITY.md", "CHANGELOG.md",
+    "README.md", "README.zh-CN.md", "COPILOT_SETUP.md", "SECURITY.md", "CHANGELOG.md",
     "pyproject.toml", "uv.lock", ".python-version", ".gitignore", ".gitattributes",
 )
+
+
 def digest(data):
     return hashlib.sha256(data).hexdigest()
 
-def main():
+
+def collect():
     paths = {ROOT / name for name in ROOT_FILES}
     paths.update((ROOT / "config").glob("*.yaml.example"))
     paths.add(ROOT / "workspace/README.md")
@@ -28,26 +30,32 @@ def main():
     payloads = {}
     for path in sorted(paths):
         if path.is_symlink() or not path.resolve().is_relative_to(ROOT):
-            raise ValueError(f"Refusing link or external file: {path.name}")
+            raise ValueError("Refusing a linked or external source file.")
         payloads[path.relative_to(ROOT).as_posix()] = path.read_bytes()
-    manifest = {name:digest(data) for name,data in payloads.items()}
-    archive = ROOT.parent / f"{PREFIX}-v{VERSION}.zip"
+    return payloads
+
+
+def main():
+    payloads = collect()
+    manifest = {name: digest(data) for name, data in payloads.items()}
+    manifest_bytes = (json.dumps(manifest, indent=2) + "\n").encode()
+    (ROOT / "SOURCE-MANIFEST.json").write_bytes(manifest_bytes)
+    version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    archive = ROOT.parent / ("bat-agent-v" + version + ".zip")
     with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as output:
         for name, data in payloads.items():
-            output.writestr(f"{PREFIX}/{name}", data)
-        output.writestr(f"{PREFIX}/SOURCE-MANIFEST.json",
-                        json.dumps(manifest, ensure_ascii=False, indent=2)+"\n")
+            output.writestr("BAT-Agent/" + name, data)
+        output.writestr("BAT-Agent/SOURCE-MANIFEST.json", manifest_bytes)
     with zipfile.ZipFile(archive) as check:
         assert check.testzip() is None
         for name, expected in manifest.items():
-            assert digest(check.read(f"{PREFIX}/{name}")) == expected, name
-        assert len(check.namelist()) == len(manifest)+1
+            assert digest(check.read("BAT-Agent/" + name)) == expected, name
+        assert len(check.namelist()) == len(manifest) + 1
     checksum = digest(archive.read_bytes())
-    archive.with_suffix(".zip.sha256").write_text(
-        f"{checksum}  {archive.name}\n", encoding="ascii")
-    print(json.dumps({"archive":str(archive), "source_files":len(manifest),
-                      "bytes":archive.stat().st_size, "sha256":checksum},
-                     ensure_ascii=False))
+    archive.with_suffix(".zip.sha256").write_text(checksum + "  " + archive.name + "\n", encoding="ascii")
+    print(json.dumps({"archive": str(archive), "source_files": len(manifest),
+                      "bytes": archive.stat().st_size, "sha256": checksum}, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     main()

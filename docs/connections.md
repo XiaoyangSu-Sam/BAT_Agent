@@ -50,10 +50,10 @@ A chat test proves that the selected endpoint/model can answer chat. It does not
 
 VPN/IP rejection is only confirmed by infrastructure or service logs. The app does not claim to know VPN state from an HTTP status.
 
-HTTP(S)_PROXY, ALL_PROXY, NO_PROXY and certificate environment settings are honored by default. TLS validation remains enabled. Set trust_env: false in YAML only when deliberately bypassing environment proxy configuration. Never publish a real API key in a screenshot or issue.
+HTTP(S)_PROXY, ALL_PROXY, NO_PROXY and certificate environment settings are honored by default. TLS validation remains enabled. Only change trust_env when your environment administrator confirms that the service should use a direct connection. Never publish a real API key in a screenshot or issue.
 
 ## Tool compatibility
 
 Native mode uses Chat Completions function tools. JSON mode is an explicit fallback for deployments without native tools. Chat only disables tools. The agent never executes an arbitrary code block from an answer.
 
-A model may chat correctly yet fail to use tools reliably. Complete the small coding and Skill tasks in company-validation.md before adopting the app for company work.
+A model may chat correctly yet fail to use tools reliably. Complete the [startup checklist](deployment-checklist.md) with the service you intend to use.

@@ -1,1 +1,2 @@
+* text=auto eol=lf
 agent_harness/static/*.bundle.js -whitespace linguist-generated=true
