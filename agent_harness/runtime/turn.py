@@ -1,4 +1,6 @@
+import asyncio
 import json
+import time
 from .context import system_prompt, wire_messages, json_action
 from .model import ModelClient
 from ..errors import HarnessError
@@ -19,7 +21,18 @@ async def run_turn(run_id, session_id, messages, config, tools, skills, executio
         if chars > execution.max_context_chars:
             raise HarnessError("context_limit", "Context limit reached. Start a fresh session with a focused task.", "context")
         await emit("step", {"number":step+1, "limit":execution.max_steps})
-        reply = await client.complete(wire, schemas, emit, tools=config.tool_mode!="disabled")
+        started = time.monotonic()
+        outcome = "failed"
+        await emit("model_wait_started", {"step":step+1, "started_at":time.time()})
+        try:
+            reply = await client.complete(wire, schemas, emit, tools=config.tool_mode!="disabled")
+            outcome = "received"
+        except asyncio.CancelledError:
+            outcome = "cancelled"
+            raise
+        finally:
+            elapsed_ms = max(0, round((time.monotonic()-started)*1000))
+            await emit("model_wait_finished", {"step":step+1, "elapsed_ms":elapsed_ms, "outcome":outcome})
         if reply.get("_usage"):
             await emit("token_usage", {"model":config.model, "model_context_window":config.context_window, **reply["_usage"]})
         reasoning = reply.get("_reasoning")
@@ -33,6 +46,8 @@ async def run_turn(run_id, session_id, messages, config, tools, skills, executio
                 reply["tool_calls"] = calls
         if config.tool_mode == "disabled" and calls:
             raise HarnessError("tools_disabled", "Provider returned tools while chat-only mode is enabled.", "model")
+        # Local display metadata; wire_messages removes it from subsequent requests.
+        reply["_model_elapsed_ms"] = elapsed_ms
         for call in calls:
             if call["id"] in seen:
                 raise HarnessError("duplicate_tool_call", "Provider reused a tool call id; execution stopped to avoid replay.", "model")

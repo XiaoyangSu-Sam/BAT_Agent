@@ -53,7 +53,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 reply={"role":"assistant","content":"## Result\n\nCreated and ran **qa_result.py**. The actual output is **42**.\n\n- The script calculates 6 × 7.\n- Execution completed successfully.\n\n```python\nprint(6 * 7)\n```\n\n| Check | Result |\n| --- | --- |\n| Exit code | 0 |\n\n<img src=x onerror=window.unsafe=true>\n[Unsafe](javascript:alert(1))"}
         reply["reasoning_content"]="I will use the registered tools to verify the result."
-        time.sleep(0.15)
+        time.sleep(1.5 if body.get("tools") else 0.15)
         self.respond(200, {"choices":[{"message":reply,"finish_reason":"stop"}],
             "usage":{"prompt_tokens":2048,"completion_tokens":128,"total_tokens":2176}})
 

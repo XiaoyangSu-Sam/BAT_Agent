@@ -96,7 +96,7 @@ def create_app(root=None, model_factory=None):
 
     @app.get("/", response_class=HTMLResponse)
     async def index():
-        return (static / "index.html").read_text(encoding="utf-8").replace("__HARNESS_TOKEN__", token)
+        return (static / "index.html").read_text(encoding="utf-8").replace("__HARNESS_TOKEN__", token).replace("__VERSION__", __version__)
 
     @app.get("/static/{name}")
     async def asset(name: str):

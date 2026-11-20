@@ -34,6 +34,8 @@ Show model reasoning is a display preference. It reveals a collapsible panel onl
 
 This release sends asynchronous tasks and polls ordered events approximately every 700 ms. You can use the page while waiting. Each complete model reply is displayed after it arrives; there is no token streaming. Reasoning likewise appears after the complete reply.
 
+Each model call shows **Thinking · seconds** while pending and **Model time · seconds** when the reply arrives. The saved time remains after reload. This is measured request time, including network, service queue/generation and retries; tools and approval waits are excluded. The service does not report its internal reasoning time separately. Failed or stopped requests are labelled accordingly. Older conversations without recorded timing do not receive invented values.
+
 ## Communication status
 
 - Sending: submitting a request to the model.

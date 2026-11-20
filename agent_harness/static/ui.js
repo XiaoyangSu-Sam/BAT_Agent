@@ -10,18 +10,19 @@ async function api(path,body){
 }
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function error(message){$("error").textContent=message;$("error").classList.toggle("hidden",!message);}
-function addMessage(role,content,reasoning){
- if(!content&&!reasoning)return;const box=el("article",undefined,"message "+role);
+function addMessage(role,content,reasoning,elapsedMs){
+ if(!content&&!reasoning&&!Number.isFinite(elapsedMs))return;const box=el("article",undefined,"message "+role);
  box.append(el("div",role==="user"?"●  You":"✧  BAT Agent","message-label"));const body=el("div",undefined,"message-body");
  content=(content||"").split("\n\n[Workspace context]\n")[0].split("\n\n[工作区上下文]\n")[0];
  if(role==="user")body.textContent=content;
  else BATMarkdown.render(body,content);
+ if(role==="assistant"&&Number.isFinite(elapsedMs))box.append(modelTimeElement(elapsedMs));
  if(reasoning)box.append(reasoningElement(reasoning));
  box.append(body);$("messages").append(box);$("welcome").classList.add("hidden");scrollChat();
 }
 function scrollChat(){$("messages").scrollTop=$("messages").scrollHeight;}
 function setBusy(value){
- busy=value;for(const id of ["send","model","newSession","sessions","settingsButton","newFile","openFolder","folderActivity","emptyOpenFolder","refreshSkills","diagnose"])$(id).disabled=value;
+ busy=value;if(!value&&modelTimer){modelTimer.node.textContent="Model request ended · timing unavailable";stopModelTimer();}for(const id of ["send","model","newSession","sessions","settingsButton","newFile","openFolder","folderActivity","emptyOpenFolder","refreshSkills","diagnose"])$(id).disabled=value;
  $("cancel").classList.toggle("hidden",!value);$("thinking").classList.toggle("hidden",!value);if(window.editorReady)editor.readOnly(value);$("diagnose").disabled=value||!$("model").value;$("connectFromWorkspace").disabled=value;updateEditorStatus();
 }
 function showConfig(){
@@ -47,14 +48,16 @@ async function loadSkills(){
 async function showSkill(id){try{const data=await api("/skills/"+encodeURIComponent(id));$("skillTitle").textContent=id;$("skillInstructions").textContent=data.instructions;$("skillDialog").showModal();}catch(e){error(e.message);}}
 async function listSessions(){const sessions=await api("/sessions");$("sessions").replaceChildren();const option=el("option","New conversation");option.value="";$("sessions").append(option);
  for(const s of sessions){const o=el("option",s.title);o.value=s.id;$("sessions").append(o);}$("sessions").value=sessionId||"";return sessions;}
-function resetRun(){events=[];after=0;runId=null;toolCards.clear();requestedTools.clear();changedPaths.clear();$("changeCount").textContent="0";$("events").replaceChildren();$("changes").replaceChildren();$("output").textContent="Process output will appear here.";$("approval").classList.add("hidden");$("runStatus").textContent="Ready";contextUsage={};renderContext();communication("idle","Ready · No request in progress");}
+function resetRun(){stopModelTimer();events=[];after=0;runId=null;toolCards.clear();requestedTools.clear();changedPaths.clear();$("changeCount").textContent="0";$("events").replaceChildren();$("changes").replaceChildren();$("output").textContent="Process output will appear here.";$("approval").classList.add("hidden");$("runStatus").textContent="Ready";contextUsage={};renderContext();communication("idle","Ready · No request in progress");}
 function clearMessages(){for(const node of [...$("messages").children])if(node.id!=="welcome")node.remove();$("welcome").classList.remove("hidden");}
 async function loadSession(id){generation++;sessionId=id;localStorage.setItem("bat.session",id||"");clearMessages();resetRun();setBusy(false);error("");
- if(!id){await listSessions();return;}const s=await api("/sessions/"+id);for(const m of s.messages)if(["user","assistant"].includes(m.role))addMessage(m.role,m.content,m._reasoning);await listSessions();
+ if(!id){await listSessions();return;}const s=await api("/sessions/"+id);for(const m of s.messages)if(["user","assistant"].includes(m.role))addMessage(m.role,m.content,m._reasoning,m._model_elapsed_ms);await listSessions();
  if(s.runs.length){runId=s.runs[0].id;await poll(++generation,true);}}
 function renderEvent(event,initial=false){
  events.push(event);after=Math.max(after,event.seq);const d=event.data;
  const detail=el("details",undefined,"event");detail.append(el("summary",(d.name||event.type)+" · "+new Date(event.time*1000).toLocaleTimeString()),el("pre",JSON.stringify(d,null,2)));$("events").append(detail);
+ if(event.type==="model_wait_started")beginModelTimer(d,initial);
+ if(event.type==="model_wait_finished")finishModelTimer(d,initial);
  if(event.type==="model_request")communication("sending","Sending request · "+d.model);
  if(event.type==="communication")communication(d.phase,d.message);
  if(event.type==="model_response")communication("received","Response received");
@@ -84,7 +87,7 @@ async function poll(mine,initial=false){
  const active=["running","awaiting_approval","cancelling"].includes(data.status);setBusy(active);$("runStatus").textContent=statuses[data.status]||data.status;
  if(!active){$("approval").classList.add("hidden");await refreshFiles();await syncOpenFiles();}
  if(data.error)error(data.error.message+(data.error.suggestions?" "+data.error.suggestions.join(" "):""));
- if(active||data.events.length===200)setTimeout(()=>poll(mine,initial),active?700:20);
+ if(active||data.events.length===200)setTimeout(()=>poll(mine,initial&&data.events.length===200),active?700:20);
  }catch(e){if(mine===generation){error("Unable to read task status: "+e.message);setTimeout(()=>poll(mine,initial),2200);}}
 }
 
@@ -116,4 +119,22 @@ function renderContext(){
  if(d.model)description="Model: "+d.model+". "+description;
  description+=" Usage refers to the latest request, not a cumulative billing total. Start a new conversation when context becomes full.";
  gauge.title=description;gauge.setAttribute("aria-label",actual?"Context usage "+percent+" percent":"Context usage unknown");$("contextDetails").textContent=description;
+}
+
+let modelTimer=null;
+const modelTimeHelp="Elapsed model request time, including network and retries. Excludes tools and approval waits; not a measurement of internal reasoning alone.";
+function formatModelTime(ms){const seconds=Math.max(0,ms)/1000;return seconds<60?seconds.toFixed(1)+" s":Math.floor(seconds/60)+" min "+Math.floor(seconds%60)+" s";}
+function modelTimeElement(ms){const node=el("div","Model time · "+formatModelTime(ms),"model-time");node.title=modelTimeHelp;return node;}
+function stopModelTimer(){if(modelTimer){clearInterval(modelTimer.interval);modelTimer.node.classList.remove("pending");modelTimer=null;}}
+function beginModelTimer(data,initial){
+ stopModelTimer();const node=modelTimeElement(0);node.classList.add("pending");$("messages").append(node);$("welcome").classList.add("hidden");
+ const started=Number.isFinite(data.started_at)?data.started_at*1000:Date.now();
+ const tick=()=>{node.textContent="Thinking · "+formatModelTime(Date.now()-started);};tick();
+ modelTimer={node,step:data.step,interval:setInterval(tick,250)};if(!initial)scrollChat();
+}
+function finishModelTimer(data,initial){
+ if(!modelTimer||modelTimer.step!==data.step)return;const node=modelTimer.node;stopModelTimer();
+ if(initial&&data.outcome==="received"){node.remove();return;}
+ const label=data.outcome==="received"?"Model time":data.outcome==="cancelled"?"Stopped after":"Request failed after";
+ node.textContent=label+" · "+formatModelTime(data.elapsed_ms);
 }

@@ -81,10 +81,12 @@ Workspace edits, folder changes, connection changes/tests and Skill refresh are 
 
 ## Event and persistence contract
 
-Events include run_started, context_usage, step, model_request, communication, model_retry, model_response, token_usage, reasoning, assistant, tool_requested, approval_required, approval_resolved, tool_started, tool_result, completed, error and cancelled.
+Events include run_started, context_usage, step, model_wait_started, model_wait_finished, model_request, communication, model_retry, model_response, token_usage, reasoning, assistant, tool_requested, approval_required, approval_resolved, tool_started, tool_result, completed, error and cancelled.
 
 Communication phases reflect HTTP transport observations; they do not prove remote compute activity. reasoning carries only endpoint-supplied text. token_usage is the most recent request’s reported usage, not a cumulative sum. Unknown metadata stays unknown.
 
-Session messages store reasoning as private local metadata. It is stripped from subsequent wire messages, as is usage metadata, to preserve Chat Completions compatibility. Reasoning is not used as executable tool input.
+model_wait_started includes step and started_at (Unix seconds); model_wait_finished includes step, elapsed_ms (monotonic request duration including retries), and outcome (received/failed/cancelled). Successful replies retain _model_elapsed_ms in local session metadata. Tools and approval waits are outside that measurement.
+
+Session messages store reasoning and model timing as private local metadata. It is stripped from subsequent wire messages, as is usage metadata, to preserve Chat Completions compatibility. Reasoning is not used as executable tool input.
 
 SQLite WAL state and pre-edit snapshots live in .harness/. Persisted data may contain user text/source/tool output/reasoning. Events redact known model credentials. Restart marks unfinished tasks interrupted; missing native tool results are repaired with explicit unknown-outcome placeholders before continuation, not replayed.

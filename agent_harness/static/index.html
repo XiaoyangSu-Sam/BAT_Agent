@@ -1,21 +1,19 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="harness-token" content="__HARNESS_TOKEN__"><title>BAT Agent — Coding workspace</title>
+<meta name="harness-token" content="__HARNESS_TOKEN__"><title>BAT Agent</title>
 <link rel="stylesheet" href="/static/style.css"></head><body>
 <div id="boot">Opening BAT Agent…</div>
 <section id="connectionScreen" class="connection hidden" aria-label="Model connection">
- <div class="connect-brand"><div class="wordmark"><span class="bat-mark">B</span> BAT Agent</div><div class="brand-copy"><div class="eyebrow">YOUR LOCAL CODING WORKSPACE</div><h1>From an idea,<br>to working code.</h1><p>Your files, code editor and AI conversation.<br>One place to build together.</p><div class="connection-sketch"><div class="sketch-dots">● ● ● <span>workspace / main.py</span></div><pre><span class="syntax-purple">def</span> <span class="syntax-blue">build_something</span>():
-    idea = <span class="syntax-green">"start here"</span>
-    <span class="syntax-purple">return</span> collaborate(idea)</pre><div class="sketch-message">✧ &nbsp; Let’s build it together.</div></div></div><small>BAT HARNESS · RUNS LOCALLY</small></div>
+ <div class="connect-brand"><div class="wordmark"><span class="bat-mark">B</span> BAT Agent</div><div class="brand-copy"><h1>BAT Agent</h1><p class="preview-version">v__VERSION__ · Internal preview</p><ul class="basic-features"><li>Chat with your model</li><li>Browse and edit files</li><li>Read, write and run Skills</li></ul></div><small>From BAT Team</small></div>
  <div class="connect-main"><button id="connectionClose" class="icon-btn close-connect hidden" aria-label="Close model settings">×</button><form id="connectionForm" class="connect-form">
-  <div class="eyebrow">MODEL CONNECTION</div><h2 id="connectionTitle">Connect your model</h2><p class="muted">Connect for AI chat, or open the workspace to explore first.</p>
+  <div class="compact-brand">BAT Agent <small>v__VERSION__ · From BAT Team</small></div><div class="eyebrow">MODEL CONNECTION</div><h2 id="connectionTitle">Connect your model</h2><p class="muted">Connect for AI chat, or open the workspace to explore first.</p>
   <label>Saved connections<select id="savedConnection"><option value="">New connection…</option></select></label>
-  <label>Endpoint <span class="required">*</span><input id="endpoint" type="url" required placeholder="http://your-server:8080/v1/chat/completions" spellcheck="false" autocomplete="off"></label>
+  <label>Endpoint <span class="required">*</span><input id="endpoint" type="url" required placeholder="Enter your endpoint" spellcheck="false" autocomplete="off"></label>
   <label>API Key <span class="optional">optional</span><input id="apiKey" type="password" placeholder="Leave blank if your service needs no key" autocomplete="off"></label>
   <label id="reuseKeyLabel" class="context-check hidden"><input id="reuseKey" type="checkbox"> Use the key already saved for this connection</label>
   <div class="discovery-row"><button id="findModels" type="button" class="secondary">Find models</button><span id="discoveryHelp" class="muted">Choose from your service’s available models.</span></div>
   <select id="discoveredModels" class="hidden" aria-label="Available models"></select>
-  <label>Model name <span class="required">*</span><input id="modelName" required placeholder="e.g. nemotron" spellcheck="false" autocomplete="off"></label>
+  <label>Model name <span class="required">*</span><input id="modelName" required placeholder="Enter model name" spellcheck="false" autocomplete="off"></label>
   <details class="advanced"><summary>Advanced settings</summary><label>Connection name<input id="connectionId" value="default" pattern="[A-Za-z0-9_-]{1,60}" required></label><label>Tool protocol<select id="toolMode"><option value="native">Native tool calling</option><option value="json">JSON protocol</option><option value="disabled">Chat only</option></select></label><label>Read API key from an environment variable (optional)<input id="keyEnv" placeholder="e.g. LLM_API_KEY" pattern="[A-Za-z_][A-Za-z0-9_]*"></label><label>Model context window (tokens, optional)<input id="contextWindow" type="number" min="1024" max="10000000" placeholder="Only if confirmed by your service"></label><small>A key entered here stays in memory until the server stops.</small></details>
   <div id="connectionResult" class="connection-result hidden" role="status"></div>
   <div class="connect-actions"><button id="testConnection" type="button" class="secondary">Test connection</button><button id="enterWorkspace" type="submit" class="primary" disabled>Open workspace <span>→</span></button></div>
@@ -45,7 +43,7 @@
   </main>
   <aside id="skillsPanel" class="skills-panel hidden"><div class="panel-heading"><span>✧ &nbsp; Registered Skills <span id="skillCount" class="count">0</span></span><div><button id="refreshSkills" class="icon-btn" aria-label="Refresh Skills">↻</button><button id="closeSkills" class="icon-btn" aria-label="Close Skills">×</button></div></div><p class="skills-intro">Available in your local registry. Read the instructions or add a Skill to this conversation.</p><div id="skills"></div></aside>
  </div>
- <footer class="statusbar"><span class="status-brand">⌁ &nbsp; BAT</span><span id="runStatus">Ready</span><span id="policy"></span><div class="rail-spacer"></div><span id="cursorStatus">Ln 1, Col 1</span><span id="encodingStatus">UTF-8</span><span id="languageStatus">Plain Text</span></footer>
+ <footer class="statusbar"><span class="status-brand" title="From BAT Team">BAT Agent</span><span class="status-version" title="Internal preview · From BAT Team">v__VERSION__</span><span id="runStatus">Ready</span><span id="policy"></span><div class="rail-spacer"></div><span id="cursorStatus">Ln 1, Col 1</span><span id="encodingStatus">UTF-8</span><span id="languageStatus">Plain Text</span></footer>
 </div>
 <dialog id="textDialog"><form id="textDialogForm"><div class="dialog-head"><h3 id="textDialogTitle"></h3><button type="button" id="textDialogClose" class="icon-btn" aria-label="Close">×</button></div><p id="textDialogHint" class="muted"></p><input id="textDialogInput" required autocomplete="off"><div id="textDialogError" class="inline-error hidden"></div><button class="primary">Confirm</button></form></dialog>
 <dialog id="skillDialog"><div class="dialog-head"><h3 id="skillTitle"></h3><button id="closeSkill" class="icon-btn" aria-label="Close Skill instructions">×</button></div><pre id="skillInstructions"></pre></dialog>

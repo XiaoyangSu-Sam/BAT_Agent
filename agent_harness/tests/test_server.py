@@ -11,7 +11,9 @@ def test_api_and_real_demo(settings, monkeypatch):
         client.headers["x-harness-token"]=app.state.token
         assert client.get("/health").json()["status"]=="ok"
         html=client.get("/").text
-        assert "HARNESS" in html and "__HARNESS_TOKEN__" not in html
+        from agent_harness import __version__
+        assert "BAT Agent" in html and "From BAT Team" in html
+        assert __version__ in html and "__VERSION__" not in html and "__HARNESS_TOKEN__" not in html
         assert client.get("/static/app.js").status_code==200
         assert client.get("/api/config").json()["models"][0]["provider"]=="fake"
         s=client.post("/api/sessions",json={"title":"integration"}).json()["id"]

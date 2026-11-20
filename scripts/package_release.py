@@ -5,7 +5,7 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 PREFIX = "agent-harness-baseline"
 ROOT_FILES = (
     "README.md", "README.zh-CN.md", "AGENTS.md", "SECURITY.md", "CHANGELOG.md",
