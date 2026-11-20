@@ -6,7 +6,11 @@ from .connection_help import network_error, status_error
 
 async def discover_models(config, transport=None):
     p = urlsplit(config.url())
-    url = urlunsplit((p.scheme, p.netloc, p.path.removesuffix("/chat/completions") + "/models", "", ""))
+    path = p.path.rstrip("/")
+    if not path.endswith("/chat/completions"):
+        raise HarnessError("model_list_unavailable", "A model-list URL cannot be inferred from this custom request URL.",
+            "configuration", suggestions=["Enter the model name from your working request and use Test connection. Model discovery is optional."])
+    url = urlunsplit((p.scheme, p.netloc, path.removesuffix("/chat/completions") + "/models", "", ""))
     secret = config.secret()
     try:
         async with httpx.AsyncClient(timeout=10, trust_env=config.trust_env, transport=transport,

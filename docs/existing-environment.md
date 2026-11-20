@@ -1,5 +1,7 @@
 # Update source in an existing environment
 
+For a selective v0.6.1 to v0.7.0 update, see the [exact file list and Copilot prompt](updates/v0.7.0.md). It also documents the conversation-state migration and rollback limits.
+
 Use this procedure for an existing BAT Agent/Harness project with a working, approved Python environment, when the source update is permitted by your organization. It is a normal application update: security policies and file-source metadata stay intact. Changing from ZIP to Git or copying text does not establish approval or guarantee execution.
 
 ## 1. Keep the working environment
@@ -29,7 +31,7 @@ For manual replacement, use this checklist:
 | --- | --- |
 | agent_harness/ | Back up the old directory, then replace it completely. Include static/ and its bundled JS files; do not merge stale modules. |
 | docs/, scripts/, web/ | Back up and replace the product directories. Preserve any unrelated custom work separately. web/ is build source; no frontend build is needed to run. |
-| README.md, README.zh-CN.md, COPILOT_SETUP.md, SECURITY.md, CHANGELOG.md | Replace with the product documents. |
+| README.md, COPILOT_SETUP.md, SECURITY.md, CHANGELOG.md | Replace with the product documents. |
 | pyproject.toml, uv.lock, .python-version | Replace together in a dedicated Harness repository. If this repository contains another application too, reconcile its package metadata first. Do not run synchronization just because a lock file changed. |
 | SOURCE-MANIFEST.json | Copy with the same release; hashes describe the unmodified source files. |
 | .gitignore, .gitattributes | Merge the source rules while retaining organization-specific rules. |

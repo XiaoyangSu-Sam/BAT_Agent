@@ -7,7 +7,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = (
-    "README.md", "README.zh-CN.md", "COPILOT_SETUP.md", "SECURITY.md", "CHANGELOG.md",
+    "README.md", "COPILOT_SETUP.md", "SECURITY.md", "CHANGELOG.md",
     "pyproject.toml", "uv.lock", ".python-version", ".gitignore", ".gitattributes",
 )
 

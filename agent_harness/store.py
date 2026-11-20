@@ -21,6 +21,9 @@ class Store:
                     seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL,
                     time REAL NOT NULL, type TEXT NOT NULL, data TEXT NOT NULL);
             """)
+            columns = {row[1] for row in db.execute("PRAGMA table_info(sessions)")}
+            if "allow_all_execution" not in columns:
+                db.execute("ALTER TABLE sessions ADD COLUMN allow_all_execution INTEGER NOT NULL DEFAULT 0")
             db.execute("UPDATE runs SET status='interrupted' WHERE status IN ('running','awaiting_approval','cancelling')")
 
     def connect(self):
@@ -31,12 +34,27 @@ class Store:
     def create_session(self, title="New task"):
         key = uuid.uuid4().hex
         with self.connect() as db:
-            db.execute("INSERT INTO sessions VALUES (?,?,?,?)", (key, title[:100], time.time(), "[]"))
+            db.execute("INSERT INTO sessions(id,title,created,messages) VALUES (?,?,?,?)", (key, title[:100], time.time(), "[]"))
         return self.session(key)
 
     def sessions(self):
         with self.connect() as db:
-            return [dict(r) for r in db.execute("SELECT id,title,created FROM sessions ORDER BY created DESC LIMIT 200")]
+            return [dict(r) for r in db.execute("""SELECT s.id,s.title,s.created,s.allow_all_execution,
+                COALESCE((SELECT MAX(r.created) FROM runs r WHERE r.session_id=s.id),s.created) AS updated
+                FROM sessions s ORDER BY updated DESC LIMIT 200""")]
+
+    def set_execution_approval(self, key, allow_all):
+        with self.connect() as db:
+            changed = db.execute("UPDATE sessions SET allow_all_execution=? WHERE id=?", (int(allow_all), key))
+            if changed.rowcount != 1:
+                raise KeyError(key)
+
+    def execution_allowed(self, key):
+        with self.connect() as db:
+            row = db.execute("SELECT allow_all_execution FROM sessions WHERE id=?", (key,)).fetchone()
+        if row is None:
+            raise KeyError(key)
+        return bool(row[0])
 
     def session(self, key):
         with self.connect() as db:

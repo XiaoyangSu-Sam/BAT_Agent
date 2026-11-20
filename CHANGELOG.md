@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — conversation workspace and execution approvals
+- Made chat the main surface, with searchable conversation history on the left and an optional right file editor that can close, resize or expand.
+- Added Approve once, Allow all for this conversation, and revocation. Conversation permission persists across restarts; other conversations and write approval rules stay separate.
+- Added exact request URLs and normalized blank YAML API keys for services without authentication.
+- Added an English file-by-file update guide and Copilot prompt, with existing-environment and local-data preservation requirements.
+- Updated English documentation and rebuilt the editor's accessible label from source. Runtime dependencies are unchanged.
+
 ## 0.6.1 — existing environment updates
 - Made checking and reusing an existing approved interpreter the default startup path.
 - Added a manual source replacement checklist and updated the Copilot setup guide.

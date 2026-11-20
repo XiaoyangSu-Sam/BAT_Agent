@@ -11,7 +11,7 @@ import uuid
 
 MANAGED = ("agent_harness", "docs", "scripts", "web")
 ROOT_FILES = {
-    "README.md", "README.zh-CN.md", "SECURITY.md", "CHANGELOG.md",
+    "README.md", "SECURITY.md", "CHANGELOG.md",
     "COPILOT_SETUP.md", "pyproject.toml", "uv.lock", ".python-version",
     "SOURCE-MANIFEST.json",
 }

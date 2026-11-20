@@ -1,5 +1,7 @@
 # Set up BAT Agent with Copilot
 
+For an existing v0.6.1 installation, use the [v0.7.0 changed-file list and update prompt](docs/updates/v0.7.0.md). Keep the [development and README rules](docs/development.md) with the imported documentation.
+
 Open the destination project in VS Code. Give Copilot this instruction together with this file:
 
 > Set up BAT Agent in this project using COPILOT_SETUP.md and docs/setup.md. Inspect the environment first, use approved installed tools, and perform the local checks. Keep real endpoint, API key, user information and private data out of source, commits and logs. Report actual results and anything that still needs my input. Do not commit or push environment files.

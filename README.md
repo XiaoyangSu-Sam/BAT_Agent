@@ -1,13 +1,13 @@
 # BAT Agent
 
-v0.6.1 · Internal preview · From BAT Team
+v0.7.0 · Internal preview · From BAT Team
 
-A local coding workbench with files and conversation on the left, a code editor in the center, and registered Skills in a side panel. The interface is English.
+A local coding workbench centered on conversation. Browse conversation history on the left, chat in the main area, and open files in an optional right editor. Close the editor for more chat space, or expand it for coding. The interface is English.
 
 - Chat with an OpenAI-compatible model; API keys are optional.
 - Read, edit and save files with conflict protection.
 - Create, register, read and execute Skills, Python scripts and optional notebooks.
-- Review execution approvals, results and local conversation history.
+- Approve execution once, or allow all execution in the current conversation until revoked.
 - See connection diagnostics, request status, model time and available context usage.
 
 ## Start
@@ -41,6 +41,6 @@ Replies arrive asynchronously as complete messages. **Show model reasoning** dis
 
 ## Help
 
-[中文说明](README.zh-CN.md) · [Setup and updates](docs/setup.md) · [Copilot setup instructions](COPILOT_SETUP.md) · [User guide](docs/user-guide.md) · [Connection help](docs/connections.md) · [Skills](docs/skills.md) · [Configuration/API](docs/configuration-api.md) · [Startup checklist](docs/deployment-checklist.md) · [Security](SECURITY.md) · [Changes](CHANGELOG.md)
+[v0.7.0 file-by-file update and Copilot prompt](docs/updates/v0.7.0.md) · [Setup and updates](docs/setup.md) · [Copilot setup instructions](COPILOT_SETUP.md) · [User guide](docs/user-guide.md) · [Development and README rules](docs/development.md) · [Connection help](docs/connections.md) · [Skills](docs/skills.md) · [Configuration/API](docs/configuration-api.md) · [Startup checklist](docs/deployment-checklist.md) · [Security](SECURITY.md) · [Changes](CHANGELOG.md)
 
 BAT Agent is a local, single-user application. Approved scripts run with your account's permissions. Keep configuration, conversations, private Skills and workspace data out of published source.

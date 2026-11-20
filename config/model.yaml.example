@@ -3,9 +3,11 @@
 # Copy to model.yaml. Do not put credentials in this file.
 provider: openai_compatible
 endpoint: ""
+endpoint_mode: auto  # auto | exact; exact preserves a complete custom request path
 model: ""
 api_key: ""
 # For a service with NO authentication: api_key: ""
+# An omitted key or a blank/null YAML value also means no authentication.
 temperature: 0.2
 timeout: 180
 connect_timeout: 10

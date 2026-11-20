@@ -40,7 +40,8 @@ class Handler(BaseHTTPRequestHandler):
             reply={"role":"assistant","content":"OK"}
         else:
             last=messages[-1]
-            tool_messages=[m for m in messages if m["role"]=="tool"]
+            last_user=max(i for i,m in enumerate(messages) if m["role"]=="user")
+            tool_messages=[m for m in messages[last_user+1:] if m["role"]=="tool"]
             if last["role"]!="tool":
                 name,args="write_file",{"path":"qa_result.py","content":"print(6 * 7)\n"}
             elif len(tool_messages)==1:

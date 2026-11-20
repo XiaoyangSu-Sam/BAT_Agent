@@ -6,9 +6,11 @@ On the connection page choose **Open workspace without a model**. Files, editing
 
 ## Your workspace
 
-The left explorer lists the active workspace. Open a file to read or edit it in the center. Use the explorer’s New file button for a new path, or Open workspace to select an existing folder by its full path on this computer.
+The left sidebar shows the current workspace and searchable conversation history. Chat uses the main area. The top-left menu toggles the sidebar. Change folder opens an existing workspace by its full path; this is a single active workspace, not a multi-project manager.
 
-Drag the divider between files and conversation to give chat more room. Drag the vertical divider to widen the sidebar. The Skills icon opens registered Skills on the right.
+Click Files to open the right coding pane. Choose a file from its explorer or use New file. Drag the divider to resize the pane, use Expand to give it the full main area, and Split view to return. Close coding space hides the pane completely and keeps unsaved drafts in memory. Reloading the page does not preserve unsaved drafts. Tool reads and newly created files do not automatically open the editor or interrupt chat. On a narrow screen, the coding pane covers the main area until closed.
+
+Skills opens registered Skills in a side panel. Activity and output below chat is collapsed by default; expand it for results, changes and events.
 
 The editor supports tabs, syntax highlighting, line numbers, folding, search, undo and Ctrl+S. A dot means unsaved changes. Files must be UTF-8 text and at most 1 MB. Binary/protected files are rejected. If the file changed on disk, the app preserves your draft and reports a conflict. Reload from disk explicitly discards that draft after confirmation.
 
@@ -59,8 +61,10 @@ At 80% and above the circle changes color. Starting a new conversation reduces c
 
 ## Approvals, output and history
 
-By default, Python/commands/notebooks require approval. Review the actual arguments, then approve or decline. Declining stops the task. File writes use the configured approval policy; the default allows them without a separate approval.
+By default, Python/commands/notebooks require approval. Review the actual arguments, then choose Approve once, Decline, or Allow all for this conversation. Declining stops the task. Allow all accepts this execution and subsequent execution tools in the same conversation, including later tasks and after page reload or server restart. It does not change other conversations or bypass file-write approvals under the all policy.
 
-Output shows actual stdout, stderr and exit codes. Changes shows file diffs. Activity shows request phases, tool parameters/results, errors and usage. Export downloads the selected run’s event JSON. It may contain source code, business data and model reasoning.
+The sidebar shows when execution is allowed. Require approval again restores the project's configured policy for subsequent operations; it does not stop a process already running. Use Stop for the current task. A project configured as trusted still permits execution automatically after a conversation override is cleared. New conversations inherit the project policy and have no Allow all override.
+
+Expand Activity and output to see actual stdout, stderr and exit codes. Changes shows file diffs. Activity shows request phases, tool parameters/results, errors and usage. Export downloads the selected run’s event JSON. It may contain source code, business data and model reasoning.
 
 File path guards are not an operating-system sandbox. Approved programs run with the current user’s permissions. See SECURITY.md for the exact boundaries.

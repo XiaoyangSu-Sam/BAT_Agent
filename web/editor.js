@@ -20,7 +20,7 @@ window.BATEditor={create(parent,onChange,onCursor,onSave){
  const lock=new Compartment(); let loading=false;
  const extensions=(path,readOnly)=>[basicSetup,oneDark,language(path),
  lock.of([EditorState.readOnly.of(readOnly),EditorView.editable.of(!readOnly)]),
- EditorView.contentAttributes.of({'aria-label':'代码编辑器'}),
+ EditorView.contentAttributes.of({'aria-label':'Code editor'}),
  keymap.of([{key:'Mod-s',run:()=>{onSave();return true;}},indentWithTab]),
  EditorView.theme({'&':{height:'100%',backgroundColor:'#1e1f22',fontSize:'13px'},
  '.cm-scroller':{fontFamily:'Consolas, "SFMono-Regular", monospace',lineHeight:'1.75'},

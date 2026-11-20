@@ -10,6 +10,7 @@ from .errors import HarnessError
 class ModelInput(BaseModel):
     id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,60}$")
     endpoint: str = Field(min_length=1, max_length=4096)
+    endpoint_mode: Literal["auto", "exact"] = "auto"
     model: str = Field(default="nemotron", min_length=1, max_length=200)
     auth_mode: Literal["none","env","session","saved"] = "none"
     api_key_env: str = Field(default="LLM_API_KEY", pattern=r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -33,6 +34,7 @@ def connection_config(value, settings=None):
     if value.auth_mode == "session" and not value.session_api_key:
         raise HarnessError("missing_credential", "Enter a session key or select another authentication mode.", "configuration")
     cfg = ModelConfig(endpoint=value.endpoint, model=value.model, api_key=key,
+                      endpoint_mode=value.endpoint_mode,
                       tool_mode=value.tool_mode, temperature=value.temperature,
                       timeout=value.timeout, trust_env=value.trust_env, context_window=value.context_window,
                       connect_timeout=value.connect_timeout, max_retries=value.max_retries, max_tokens=value.max_tokens)

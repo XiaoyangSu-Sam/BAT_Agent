@@ -2,8 +2,10 @@ import asyncio
 import json
 import httpx
 import pytest
+from pydantic import ValidationError
 from agent_harness.config import ModelConfig
 from agent_harness.errors import HarnessError
+from agent_harness.model_discovery import discover_models
 from agent_harness.runtime.model import ModelClient, validate_reply
 from agent_harness.diagnostics import diagnose
 
@@ -21,6 +23,23 @@ def response(content="ok", calls=None):
 def test_endpoint(url, expected):
     assert ModelConfig(endpoint=url).url() == expected
 
+@pytest.mark.parametrize("url", [
+    "https://model.invalid/api/infer", "https://model.invalid/api/infer/",
+    "https://model.invalid/v1", "https://model.invalid/v1/chat/completions/"])
+def test_exact_endpoint_preserves_request_path(url):
+    assert ModelConfig(endpoint=url, endpoint_mode="exact").url() == url
+
+
+def test_custom_endpoint_does_not_guess_model_list():
+    def unexpected_request(request):
+        pytest.fail("Model discovery must not send a request to a guessed custom route")
+
+    cfg = ModelConfig(endpoint="https://model.invalid/api/infer", endpoint_mode="exact")
+    with pytest.raises(HarnessError) as exc:
+        asyncio.run(discover_models(cfg, httpx.MockTransport(unexpected_request)))
+    assert exc.value.code == "model_list_unavailable"
+
+
 def test_env_resolution(monkeypatch):
     monkeypatch.setenv("TEST_HARNESS_KEY","test-secret")
     assert ModelConfig(api_key="$TEST_HARNESS_KEY").secret() == "test-secret"
@@ -29,6 +48,58 @@ def test_env_resolution(monkeypatch):
     monkeypatch.delenv("TEST_HARNESS_KEY")
     with pytest.raises(HarnessError):
         ModelConfig(api_key="$TEST_HARNESS_KEY").secret()
+
+@pytest.mark.parametrize("key_line", ['', 'api_key:', 'api_key: null', 'api_key: ""'])
+@pytest.mark.parametrize("filename", ["model.yaml", "environment.yaml"])
+def test_yaml_without_credentials_sends_no_authentication(settings, key_line, filename):
+    folder = settings.root / "config"
+    folder.mkdir()
+    content = "endpoint: http://model.invalid/v1\nmodel: test-model\n" + key_line + "\n"
+    if filename == "environment.yaml":
+        content = "default_model: test\nmodels:\n  test:\n" + "".join(
+            "    " + line + "\n" for line in content.splitlines())
+    folder.joinpath(filename).write_text(content, encoding="utf-8")
+    settings.reload()
+    cfg = settings.model()
+    assert cfg.secret() == ""
+    assert settings.public()["models"][0]["ready"] is True
+    assert settings.public()["models"][0]["credential_configured"] is False
+    requests = []
+
+    def handler(req):
+        requests.append((req.method, req.url.path))
+        assert "authorization" not in req.headers
+        if req.method == "GET":
+            return httpx.Response(200, json={"data": [{"id": "test-model"}]})
+        return httpx.Response(200, json=response())
+
+    transport = httpx.MockTransport(handler)
+    result = asyncio.run(ModelClient(cfg, transport).complete(
+        [{"role": "user", "content": "hi"}], [], quiet))
+    assert result["content"] == "ok"
+    discovered = asyncio.run(discover_models(cfg, transport))
+    assert discovered["models"][0]["id"] == "test-model"
+    assert requests == [("POST", "/v1/chat/completions"), ("GET", "/v1/models")]
+
+
+@pytest.mark.parametrize("value", [False, 0, [], {}])
+def test_invalid_credential_types_are_rejected(value):
+    with pytest.raises(ValidationError):
+        ModelConfig(api_key=value)
+
+
+@pytest.mark.parametrize("credential", ["test-secret", "$TEST_HARNESS_KEY"])
+def test_configured_credentials_are_still_sent(monkeypatch, credential):
+    monkeypatch.setenv("TEST_HARNESS_KEY", "test-secret")
+
+    def handler(req):
+        assert req.headers["authorization"] == "Bearer test-secret"
+        return httpx.Response(200, json=response())
+
+    client = ModelClient(ModelConfig(endpoint="http://model.invalid/v1", api_key=credential),
+                         httpx.MockTransport(handler))
+    assert asyncio.run(client.complete([], [], quiet))["content"] == "ok"
+
 
 def test_retry_only_model_request():
     count=0

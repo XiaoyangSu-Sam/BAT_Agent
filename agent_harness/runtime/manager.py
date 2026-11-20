@@ -50,10 +50,11 @@ class RunManager:
         async def approve(call_id, name, args):
             future = asyncio.get_running_loop().create_future()
             approval_id = uuid.uuid4().hex
-            self.approvals[key] = (approval_id, future)
+            kind = tools.entries[name]["kind"]
+            self.approvals[key] = (approval_id, future, kind, session_id)
             self.store.status(key, "awaiting_approval")
             await emit("approval_required", {"approval_id":approval_id,"call_id":call_id,
-                                             "name":name,"arguments":args})
+                                             "name":name,"arguments":args,"kind":kind})
             try:
                 accepted = await asyncio.wait_for(future, 600)
                 self.store.status(key, "running")
@@ -69,7 +70,8 @@ class RunManager:
                        "tool_mode":config.tool_mode,"workspace":str(self.settings.workspace)})
             tools = ToolRegistry(self.settings, self.skills)
             await run_turn(key, session_id, messages, config, tools, self.skills,
-                           self.settings.execution, self.store, emit, approve, self.model_factory)
+                           self.settings.execution, self.store, emit, approve, self.model_factory,
+                           execution_allowed=lambda: self.store.execution_allowed(session_id))
             self.store.status(key, "completed")
             await emit("completed", {})
         except asyncio.CancelledError:
@@ -86,10 +88,15 @@ class RunManager:
         finally:
             self.approvals.pop(key, None)
 
-    def decide(self, key, approval_id, accepted):
+    def decide(self, key, approval_id, accepted, allow_all_execution=False):
         item = self.approvals.get(key)
         if not item or item[0] != approval_id or item[1].done():
             raise HarnessError("approval_expired", "This approval is no longer pending.", "approval")
+        if allow_all_execution:
+            if not accepted or item[2] != "execute":
+                raise HarnessError("invalid_approval_scope", "Allow all applies only to an approved execution request.", "approval")
+            self.store.set_execution_approval(item[3], True)
+            self.store.event(key, "approval_policy_changed", {"session_id":item[3], "allow_all_execution":True})
         item[1].set_result(accepted)
 
     async def cancel(self, key):

@@ -6,7 +6,7 @@ from .model import ModelClient
 from ..errors import HarnessError
 
 async def run_turn(run_id, session_id, messages, config, tools, skills, execution,
-                   store, emit, approve, model_factory=ModelClient):
+                   store, emit, approve, model_factory=ModelClient, execution_allowed=None):
     seen = set()
     client = model_factory(config)
     schemas = tools.schemas()
@@ -72,6 +72,8 @@ async def run_turn(run_id, session_id, messages, config, tools, skills, executio
                 kind = entry["kind"]
                 needs = execution.approval_mode == "all" and kind != "read"
                 needs |= execution.approval_mode == "execution" and kind == "execute"
+                if kind == "execute" and execution_allowed is not None and execution_allowed():
+                    needs = False
                 if needs and not await approve(call["id"], name, args):
                     raise HarnessError("approval_denied", "The user declined this operation. Do not retry it without new authorization.", "tool")
                 # Persist the start event before touching the filesystem/process.

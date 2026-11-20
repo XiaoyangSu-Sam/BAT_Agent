@@ -16,7 +16,7 @@ function renderTabs(){
  }if(!documents.size)$("editorTabs").append(el("span","Welcome","empty-tab"));updateEditorStatus();
 }
 function activate(name){activePath=name;const doc=documents.get(name);$("editorEmpty").classList.toggle("hidden",!!doc);$("editorHost").classList.toggle("hidden",!doc);
- if(doc){editor.load(doc.content,name,busy);$("breadcrumbs").textContent=name.replaceAll("/","  ›  ");}else $("breadcrumbs").textContent=config.workspace;
+ if(doc){showEditor(true);editor.load(doc.content,name,busy);$("breadcrumbs").textContent=name.replaceAll("/","  ›  ");}else $("breadcrumbs").textContent=config.workspace;
  renderTabs();renderFileTree();updateContext();
 }
 async function openFile(name){if(!documents.has(name)){const data=await api("/workspace/file?path="+encodeURIComponent(name));const text=normalize(data.content);documents.set(name,{...data,base:text,content:text,dirty:false,conflict:false});}activate(name);}
@@ -35,7 +35,7 @@ async function syncOpenFiles(){
  if(doc.dirty)doc.conflict=true;else{const text=normalize(data.content);Object.assign(doc,data,{base:text,content:text,conflict:false});if(activePath===name)editor.load(text,name,busy);}}}catch(e){doc.conflict=true;}}
  renderTabs();
 }
-async function syncChangedFile(name){await refreshFiles();if(documents.has(name))await syncOpenFiles();else await openFile(name);}
+async function syncChangedFile(name){await refreshFiles();if(documents.has(name))await syncOpenFiles();}
 async function refreshFiles(){const data=await api("/workspace/tree");filePaths=data.files;$("fileLimit").classList.toggle("hidden",!data.possibly_truncated);renderFileTree();}
 function renderFileTree(){
  const filter=$("fileFilter").value.toLowerCase();const paths=filePaths.filter(p=>p.toLowerCase().includes(filter));const tree=new Map();
@@ -67,7 +67,4 @@ function initWorkspaceEvents(){
  window.addEventListener("beforeunload",e=>{if(hasDirty()){e.preventDefault();e.returnValue="";}});
  window.addEventListener("focus",()=>{if(config&&!$("workbench").classList.contains("hidden")&&!busy)syncOpenFiles().catch(()=>{});});
  document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveActive().catch(err=>error(err.message));}});
- function resize(handle,move){handle.onpointerdown=e=>{handle.setPointerCapture(e.pointerId);const listener=event=>move(event);handle.onpointermove=listener;handle.onpointerup=()=>{handle.onpointermove=null;};};}
- resize($("sidebarResize"),e=>document.documentElement.style.setProperty("--sidebar-width",Math.max(280,Math.min(window.innerWidth*.5,e.clientX-48))+"px"));
- resize($("explorerResize"),e=>document.documentElement.style.setProperty("--explorer-height",Math.max(120,Math.min(window.innerHeight*.45,e.clientY-42))+"px"));
 }

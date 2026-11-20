@@ -1,4 +1,5 @@
 import json
+import re
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +14,10 @@ def test_first_run_and_existing_model_yaml(settings):
     with client_for(settings.root) as client:
         assert client.get("/api/config").json()["setup_required"]
         assert client.get("/static/editor.bundle.js").status_code == 200
+        for asset in re.findall(r'(?:src|href)="(/static/[^\"]+)"', client.get("/").text):
+            response = client.get(asset)
+            assert response.status_code == 200, asset
+            assert response.content, asset
     folder = settings.root / "config"
     folder.mkdir()
     (folder / "model.yaml").write_text("endpoint: http://model.test/v1\nmodel: test-model\napi_key: ''\n")
@@ -46,6 +51,39 @@ def test_connection_uses_http_and_does_not_save_draft(settings, key):
         assert key not in (settings.root / "config/environment.yaml").read_text()
         with client_for(settings.root) as client:
             assert client.get("/api/config").json()["setup_required"]
+
+def test_custom_endpoint_404_is_fixed_by_exact_mode_and_survives_reload(settings):
+    requests = []
+    endpoint = "https://model.invalid/api/inference/"
+
+    def handle(request):
+        requests.append(str(request.url))
+        body = json.loads(request.content)
+        assert request.headers["content-type"] == "application/json"
+        assert "authorization" not in request.headers
+        assert body["model"] == "custom-model" and "tools" not in body
+        if str(request.url) != endpoint:
+            return httpx.Response(404)
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "OK"}}]})
+
+    factory = lambda cfg: ModelClient(cfg, transport=httpx.MockTransport(handle))
+    value = {"id": "custom", "endpoint": endpoint, "model": "custom-model", "auth_mode": "none"}
+    with client_for(settings.root, factory) as client:
+        rejected = client.post("/api/models/test", json=value)
+        assert rejected.json()["error"]["http_status"] == 404
+        value["endpoint_mode"] = "exact"
+        report = client.post("/api/models/test", json=value)
+        assert report.status_code == 200 and report.json()["connected"]
+        assert report.json()["endpoint"] == endpoint
+        assert client.post("/api/models", json=value).status_code == 200
+    with client_for(settings.root, factory) as client:
+        saved = client.get("/api/config").json()["models"][0]
+        assert saved["endpoint_mode"] == "exact" and saved["endpoint"] == endpoint
+        cfg = client.app.state.settings.model()
+        assert cfg.url() == endpoint and cfg.api_key == ""
+        assert client.post("/api/models/test", json=value).json()["connected"]
+    assert requests == [endpoint.rstrip("/") + "/v1/chat/completions", endpoint, endpoint]
+
 
 def test_failed_connection_and_invalid_input_do_not_echo_key(settings):
     factory = lambda cfg: ModelClient(cfg, transport=httpx.MockTransport(

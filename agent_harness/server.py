@@ -28,6 +28,10 @@ class Prompt(BaseModel):
 class Decision(BaseModel):
     approval_id: str
     approved: bool
+    allow_all_execution: bool = False
+
+class ExecutionApprovalInput(BaseModel):
+    allow_all: bool
 
 class SessionInput(BaseModel):
     title: str = "New task"
@@ -100,7 +104,7 @@ def create_app(root=None, model_factory=None):
 
     @app.get("/static/{name}")
     async def asset(name: str):
-        if name not in ("app.js","ui.js","style.css","editor.bundle.js","connection.js","workspace.js","markdown.bundle.js"):
+        if name not in ("app.js","ui.js","style.css","chat-layout.css","layout.js","editor.bundle.js","connection.js","workspace.js","markdown.bundle.js"):
             return JSONResponse({}, status_code=404)
         return FileResponse(static / name)
 
@@ -196,6 +200,14 @@ def create_app(root=None, model_factory=None):
     async def session(session_id: str):
         return {**store.session(session_id), "runs":store.runs(session_id)}
 
+    @app.post("/api/sessions/{session_id}/execution-approval")
+    async def execution_approval(session_id: str, value: ExecutionApprovalInput):
+        # Enabling requires an actual pending execution approval. This endpoint revokes it.
+        if value.allow_all:
+            raise HarnessError("invalid_approval_scope", "Use Allow all on a pending execution request.", "approval")
+        store.set_execution_approval(session_id, False)
+        return {"session_id":session_id, "allow_all_execution":False}
+
     @app.post("/api/sessions/{session_id}/runs")
     async def run(session_id: str, value: Prompt):
         return {"run_id":manager.start(session_id, value.prompt, value.model_id)}
@@ -206,7 +218,7 @@ def create_app(root=None, model_factory=None):
 
     @app.post("/api/runs/{run_id}/approval")
     async def approval(run_id: str, value: Decision):
-        manager.decide(run_id, value.approval_id, value.approved)
+        manager.decide(run_id, value.approval_id, value.approved, value.allow_all_execution)
         return {"accepted":True}
 
     @app.post("/api/runs/{run_id}/cancel")

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 import yaml
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Literal
 from .errors import HarnessError
 
@@ -12,6 +12,7 @@ class ModelConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider: Literal["openai_compatible", "fake"] = "openai_compatible"
     endpoint: str = ""
+    endpoint_mode: Literal["auto", "exact"] = "auto"
     model: str = "nemotron"
     api_key: str = ""
     temperature: float = Field(default=0.2, ge=0, le=2)
@@ -22,6 +23,12 @@ class ModelConfig(BaseModel):
     tool_mode: Literal["native", "json", "disabled"] = "native"
     trust_env: bool = True
     context_window: int | None = Field(default=None, ge=1024, le=10000000)
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def normalize_empty_api_key(cls, value):
+        # An empty YAML value is null; both forms mean no authentication.
+        return "" if value is None else value
 
     def secret(self):
         value = self.api_key
@@ -39,6 +46,8 @@ class ModelConfig(BaseModel):
         p = urlsplit(self.endpoint.strip())
         if p.scheme not in ("http", "https") or not p.hostname or p.username or p.password or p.query or p.fragment:
             raise HarnessError("invalid_endpoint", "Use an http(s) endpoint without URL credentials, query or fragment.", "configuration")
+        if self.endpoint_mode == "exact":
+            return urlunsplit((p.scheme, p.netloc, p.path, "", ""))
         path = p.path.rstrip("/")
         if not path.endswith("/chat/completions"):
             path += "/chat/completions" if path.endswith("/v1") else "/v1/chat/completions"

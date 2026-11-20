@@ -3,6 +3,7 @@ let testedConnection=null,connectionVersion=0,testingConnection=false,discovered
 function connectionValue(){
  const secret=$("apiKey").value,env=$("keyEnv").value.trim(),existing=config.models.find(m=>m.id===$("savedConnection").value);
  return {id:$("connectionId").value.trim(),endpoint:$("endpoint").value.trim(),model:$("modelName").value.trim(),
+ endpoint_mode:$("endpointMode").value,
  auth_mode:secret?"session":env?"env":$("reuseKey").checked?"saved":"none",session_api_key:secret,api_key_env:env||"LLM_API_KEY",
  tool_mode:$("toolMode").value,temperature:existing?.temperature??0.2,timeout:existing?.timeout??180,
  connect_timeout:existing?.connect_timeout??10,max_retries:existing?.max_retries??2,max_tokens:existing?.max_tokens??4096,trust_env:existing?.trust_env??true,context_window:$("contextWindow").value?Number($("contextWindow").value):null};
@@ -11,6 +12,7 @@ function invalidateConnection(){connectionVersion++;testedConnection=null;$("ent
 function fillConnection(current){
  invalidateConnection();const real=current?.provider!=="fake";
  $("endpoint").value=real?current?.endpoint||"":"";
+ $("endpointMode").value=real?current?.endpoint_mode||"auto":"auto";
  $("modelName").value=real?current?.model||"":"";
  $("connectionId").value=real?current?.id||(config.models.some(m=>m.id==="default")?"connection-"+(config.models.length+1):"default"):"default";
  $("apiKey").value="";$("keyEnv").value=current?.credential_env||"";$("toolMode").value=current?.tool_mode||"native";
