@@ -1,6 +1,6 @@
 # BAT Agent
 
-v0.6.0 · 内测版 · From BAT Team
+v0.6.1 · 内测版 · From BAT Team
 
 本地代码工作台，界面默认英文。左侧文件和对话，中间代码编辑器，侧栏查看已注册 Skills。
 
@@ -12,16 +12,22 @@ v0.6.0 · 内测版 · From BAT Team
 
 ## 启动
 
-使用已获准使用的 Python 3.11+。在项目目录打开终端：
+已有正常使用且获准运行的项目环境时，保留原目录和 .venv，按 [现有环境中的源码更新](docs/existing-environment.md) 替换应用文件。
+
+在更新后的源码目录打开 PowerShell，输入原来可用的 Python 完整路径，先检查依赖：
 
 ~~~powershell
-python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -e .
-./.venv/Scripts/python.exe scripts/check_environment.py
-./.venv/Scripts/python.exe -m agent_harness
+$BatPython = Read-Host "Full path to the existing approved python.exe"
+& $BatPython scripts/check_environment.py
 ~~~
 
-打开 **http://127.0.0.1:8765**。终端保持运行，Ctrl+C 停止。已有环境时可以直接用该环境的 Python，不必重新创建。
+报告 ok: true 后直接启动：
+
+~~~powershell
+& $BatPython -m agent_harness
+~~~
+
+打开 **http://127.0.0.1:8765**。终端保持运行，Ctrl+C 停止。依赖齐全时无需重新安装项目，也不新建环境。检查失败则先按 [安装说明](docs/setup.md) 处理；新环境只在需要且获准时创建。
 
 运行工作台不需要 Node、npm 或下载浏览器。Python 依赖需已安装，或从允许使用的软件源安装。uv、离线安装和已有目录更新步骤见 [安装说明](docs/setup.md)。可以把 [COPILOT_SETUP.md](COPILOT_SETUP.md) 交给 Copilot 按步骤完成配置。
 

@@ -1,6 +1,6 @@
 # BAT Agent
 
-v0.6.0 · Internal preview · From BAT Team
+v0.6.1 · Internal preview · From BAT Team
 
 A local coding workbench with files and conversation on the left, a code editor in the center, and registered Skills in a side panel. The interface is English.
 
@@ -12,16 +12,22 @@ A local coding workbench with files and conversation on the left, a code editor 
 
 ## Start
 
-Use an approved Python 3.11+ environment. In the project folder:
+Already have a working approved project environment? Keep it in place and follow [Update source in an existing environment](docs/existing-environment.md). No new .venv is needed.
+
+In the updated source folder, select that interpreter and check its dependencies first:
 
 ~~~powershell
-python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -e .
-./.venv/Scripts/python.exe scripts/check_environment.py
-./.venv/Scripts/python.exe -m agent_harness
+$BatPython = Read-Host "Full path to the existing approved python.exe"
+& $BatPython scripts/check_environment.py
 ~~~
 
-Open **http://127.0.0.1:8765**. Keep the terminal open; Ctrl+C stops the app. If you already have an environment, use its Python instead. See [Setup](docs/setup.md) for uv, approved package sources, offline installation and updating an existing folder.
+If the check reports ok: true, start directly:
+
+~~~powershell
+& $BatPython -m agent_harness
+~~~
+
+Open **http://127.0.0.1:8765**. Keep the terminal open; Ctrl+C stops the app. If the check fails, follow [Setup](docs/setup.md) before starting. New environments are optional and should be created only through an approved workflow.
 
 No Node, npm or browser download is needed to run the workbench. Python dependencies must already be installed or available from your approved package source.
 

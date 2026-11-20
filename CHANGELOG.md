@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 — existing environment updates
+- Made checking and reusing an existing approved interpreter the default startup path.
+- Added a manual source replacement checklist and updated the Copilot setup guide.
+- Documented direct source startup when dependencies are already available, without an install or environment creation step.
+- Added upper-version checks so incompatible existing dependencies do not report ready.
+
 ## 0.6.0 — installation and replacement
 - Added verified source deployment with preview, backup, recovery and optional fresh local configuration.
 - Preserved existing repository settings, Skills and workspace data during replacement.

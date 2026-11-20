@@ -15,7 +15,7 @@ const assert=require("node:assert/strict");
  assert.equal(await page.locator("#endpoint").getAttribute("placeholder"),"Enter your endpoint");
  assert.equal(await page.locator("#modelName").getAttribute("placeholder"),"Enter model name");
  assert.ok((await page.locator(".connect-brand").textContent()).includes("From BAT Team"));
- assert.ok((await page.locator(".preview-version").textContent()).includes("0.6.0"));
+ assert.ok((await page.locator(".preview-version").textContent()).includes("0.6.1"));
  await page.screenshot({path:path.join(qa,"connection.png"),fullPage:true});
  await page.click("#previewWorkspace");await page.locator("#workbench").waitFor({state:"visible"});
  await page.locator(".editor-tab").filter({hasText:"README.md"}).waitFor();

@@ -7,8 +7,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-REQUIRED = {"fastapi": (0, 115), "uvicorn": (0, 30), "httpx": (0, 27),
-            "PyYAML": (6,), "jsonschema": (4, 23), "pydantic": (2,)}
+REQUIRED = {"fastapi": ((0, 115), (1,)), "uvicorn": ((0, 30), (1,)),
+            "httpx": ((0, 27), (1,)), "PyYAML": ((6,), (7,)),
+            "jsonschema": ((4, 23), (5,)), "pydantic": ((2,), (3,))}
 
 
 def check():
@@ -16,13 +17,13 @@ def check():
     packages = {}
     if sys.version_info < (3, 11):
         issues.append("Python 3.11 or later is required.")
-    for name, minimum in REQUIRED.items():
+    for name, (minimum, maximum) in REQUIRED.items():
         try:
             version = importlib.metadata.version(name)
             parts = tuple(int(p) for p in version.split(".")[:len(minimum)])
             packages[name] = version
-            if parts < minimum:
-                issues.append(name + " needs updating.")
+            if parts < minimum or parts >= maximum:
+                issues.append(name + " is outside the supported version range; review approved package changes.")
         except (importlib.metadata.PackageNotFoundError, ValueError):
             packages[name] = "missing or unrecognized"
             issues.append(name + " must be installed in this interpreter.")
@@ -40,6 +41,8 @@ def check():
             issues.append("Configuration could not load. Review local YAML fields and credential-variable availability; no values have been printed.")
     registered, warnings = [], []
     try:
+        if issues:
+            raise RuntimeError("Required prerequisites have not passed.")
         from agent_harness.runtime.skills import SkillRegistry
         registry = SkillRegistry(ROOT / "skills")
         registered = list(registry.skills)

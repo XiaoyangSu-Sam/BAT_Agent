@@ -6,7 +6,15 @@ Use an approved Python 3.11 or later (3.12 is recommended). The server and Skill
 
 Do not copy a virtual environment from another computer. Do not run dependency synchronization on a shared environment: it may remove unrelated packages. The commands below install into the selected interpreter without intentionally removing other packages.
 
-## Install
+## Existing environment first
+
+For a source update into an existing project, follow [Update source in an existing environment](existing-environment.md). Keep the approved environment at its current location, run check_environment.py with its explicit interpreter path, and start directly if checks pass. No editable install is necessary when running from the source root with dependencies already present.
+
+If a security product blocks an executable, retain the event details for IT and stop the blocked operation. Removing a downloaded-file warning or a read-only attribute does not establish that the executable is allowed by the application's security policy.
+
+## Install only when needed
+
+For a genuinely new environment, first confirm the chosen Python version and that creating an environment at this location is approved. The following commands create and execute a new interpreter; they are not required when reusing an existing environment.
 
 For a new environment on Windows:
 
@@ -71,7 +79,7 @@ Replaced: agent_harness/, docs/, scripts/, web/ and the release's root product/p
 
 The backup is outside the destination repository and can contain private data. Never publish it. For rollback, stop the server, consult backup/DEPLOYMENT.json, remove the paths listed as installed, then restore each saved path. A failed apply attempts to undo its own changes and reports the backup location. Back up your whole repository separately if you also want to undo changes made by the application after deployment.
 
-After replacement, use the destination's chosen interpreter to install -e ., run check_environment.py, then start -m agent_harness. Old virtual environments may need updated dependencies. An old database is not automatically converted; use --reset-local when replacing an unrelated application.
+After replacement, use the destination's chosen interpreter to run check_environment.py. If checks pass, start -m agent_harness directly from the updated source root. Install or update packages only if needed through the approved environment workflow. Old virtual environments may need updated dependencies. An old database is not automatically converted; use --reset-local when replacing an unrelated application.
 
 The source manifest detects missing or modified release files. It is not a signature; get the archive from a trusted source. The helper refuses links/junctions in paths it touches and refuses source/destination overlap. It does not delete unknown packages or alter Git history.
 
