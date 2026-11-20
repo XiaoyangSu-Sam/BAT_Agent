@@ -1,0 +1,15 @@
+# Optional manual configuration. Fill endpoint and model locally, or use the connection page.
+# Named models override the single-model fallback with the same id.
+default_model: internal
+models:
+  internal:
+    provider: openai_compatible
+    endpoint: ""
+    model: ""
+    api_key: ""
+    temperature: 0.2
+    timeout: 180
+    tool_mode: native
+
+# Optional verified capacity (tokens), used by the context ring.
+# Under an individual model: context_window: 32768
