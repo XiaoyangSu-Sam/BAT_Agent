@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2 — Nemotron transport compatibility
+- Documented the NVIDIA Nemotron 3.5 Super VL Chat Completions contract and live verification.
+- Preserved same-turn native tool reasoning for the supported model and validated structured replies before dispatch.
+- Distinguished truncated readiness responses from complete chat and strengthened the tool diagnostic.
+- Exposed the output token budget, requested complete JSON, and reported unexpected event streams and upstream request IDs.
+
 ## 0.7.1 — model switching and conversation controls
 - Added a conversation approval selector for Ask for approval, Approval for me, and Full access.
 - Made adding and switching saved models explicit. The active connection shows the latest chat check and can be checked from the header.

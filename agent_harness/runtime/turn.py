@@ -12,7 +12,7 @@ async def run_turn(run_id, session_id, messages, config, tools, skills, executio
     schemas = tools.schemas()
     for step in range(execution.max_steps):
         wire = [{"role":"system","content":system_prompt(skills, config.tool_mode)},
-                *wire_messages(messages, config.tool_mode)]
+                *wire_messages(messages, config.tool_mode, continue_tool_reasoning=config.continues_tool_reasoning())]
         if config.tool_mode == "json":
             wire[0]["content"] += "\nTools:\n" + json.dumps(schemas)
         chars = len(json.dumps(wire)) + len(json.dumps(schemas))

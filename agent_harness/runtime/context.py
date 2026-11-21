@@ -65,10 +65,11 @@ def repair_incomplete(messages):
                         "message":"Previous run interrupted. Verify files/results before acting; do not blindly replay."}})})
     return result
 
-def wire_messages(messages, mode):
+def wire_messages(messages, mode, *, continue_tool_reasoning=False):
     # Session persistence is protocol-neutral enough to switch model/tool modes.
+    last_user = max((i for i, m in enumerate(messages) if m["role"] == "user"), default=-1)
     result = []
-    for m in messages:
+    for i, m in enumerate(messages):
         if mode in ("json", "disabled") and m.get("tool_calls"):
             for call in m["tool_calls"]:
                 result.append({"role":"assistant","content":json.dumps({
@@ -77,5 +78,9 @@ def wire_messages(messages, mode):
         elif mode in ("json", "disabled") and m["role"] == "tool":
             result.append({"role":"user","content":"TOOL_RESULT " + m["content"]})
         else:
-            result.append({k:v for k,v in m.items() if not k.startswith("_")})
+            outgoing = {k:v for k,v in m.items() if not k.startswith("_")}
+            if (continue_tool_reasoning and mode == "native" and i > last_user >= 0
+                    and m["role"] == "assistant" and m.get("tool_calls") and m.get("_reasoning")):
+                outgoing["reasoning_content"] = m["_reasoning"]
+            result.append(outgoing)
     return result

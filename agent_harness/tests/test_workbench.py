@@ -128,6 +128,28 @@ def test_saved_model_checks_use_the_selected_endpoint_and_credential(settings, m
     assert seen == [("https://alpha.invalid/v1/chat/completions", "alpha", None),
                     ("https://beta.invalid/custom", "beta", "Bearer fixture-secondary-key")]
 
+def test_nemotron_reasoning_exhaustion_is_reachable_only_for_short_probe(settings):
+    def handle(request):
+        budget = json.loads(request.content)["max_tokens"]
+        return httpx.Response(200, json={
+            "choices": [{"finish_reason": "length", "message": {
+                "role": "assistant", "content": "", "reasoning": "Work in progress.",
+            }}],
+            "usage": {"prompt_tokens": 25, "completion_tokens": budget, "total_tokens": budget + 25},
+        })
+
+    factory = lambda cfg: ModelClient(cfg, transport=httpx.MockTransport(handle))
+    value = {"id": "nemotron", "endpoint": "https://model.invalid/v1",
+             "model": "nvidia/nemotron-3.5-super-vl-120b-a12b"}
+    with client_for(settings.root, factory) as client:
+        full = client.post("/api/models/test", json=value)
+        assert full.status_code == 400 and full.json()["error"]["code"] == "output_truncated"
+        assert client.post("/api/models", json=value).status_code == 200
+        short = client.post("/api/models/nemotron/check", json={})
+        assert short.status_code == 200 and short.json()["connected"]
+        assert short.json()["reply_status"] == "output_truncated"
+        assert "Work in progress" not in short.text
+
 def test_editor_reads_full_document_and_protects_conflicts(settings):
     source = "\r\n".join(f"# line {i} " + "x"*90 for i in range(600))+"\r\n"
     file = settings.workspace / "large.py"

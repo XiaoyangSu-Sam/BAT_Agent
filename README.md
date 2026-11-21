@@ -1,6 +1,6 @@
 # BAT Agent
 
-v0.7.1 · Internal preview · From BAT Team
+v0.7.2 · Internal preview · From BAT Team
 
 A local coding workbench centered on conversation. Browse conversation history on the left, chat in the main area, and open files in an optional right editor. Close the editor for more chat space, or expand it for coding. The interface is English.
 
@@ -41,6 +41,6 @@ Replies arrive asynchronously as complete messages. **Show model reasoning** dis
 
 ## Help
 
-[v0.7.1 file-by-file update and Copilot prompt](docs/updates/v0.7.1.md) · [Setup and updates](docs/setup.md) · [Copilot setup instructions](COPILOT_SETUP.md) · [User guide](docs/user-guide.md) · [Development and README rules](docs/development.md) · [Connection help](docs/connections.md) · [Skills](docs/skills.md) · [Configuration/API](docs/configuration-api.md) · [Startup checklist](docs/deployment-checklist.md) · [Security](SECURITY.md) · [Changes](CHANGELOG.md)
+[v0.7.2 file-by-file update and Copilot prompt](docs/updates/v0.7.2.md) · [Setup and updates](docs/setup.md) · [Copilot setup instructions](COPILOT_SETUP.md) · [User guide](docs/user-guide.md) · [Development and README rules](docs/development.md) · [Connection help](docs/connections.md) · [Skills](docs/skills.md) · [Configuration/API](docs/configuration-api.md) · [Startup checklist](docs/deployment-checklist.md) · [Security](SECURITY.md) · [Changes](CHANGELOG.md)
 
 BAT Agent is a local, single-user application. Approved scripts run with your account's permissions. Keep configuration, conversations, private Skills and workspace data out of published source.

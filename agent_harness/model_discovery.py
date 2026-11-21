@@ -20,7 +20,7 @@ async def discover_models(config, transport=None):
         if response.status_code >= 300:
             raise status_error(response)
         data = response.json()
-        if not isinstance(data.get("data"), list):
+        if not isinstance(data, dict) or not isinstance(data.get("data"), list):
             raise ValueError()
         models = []
         for item in data["data"][:300]:

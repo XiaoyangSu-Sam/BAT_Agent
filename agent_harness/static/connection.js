@@ -74,7 +74,7 @@ function connectionValue(){
  endpoint_mode:$("endpointMode").value,
  auth_mode:secret?"session":env?"env":$("reuseKey").checked?"saved":"none",session_api_key:secret,api_key_env:env||"LLM_API_KEY",
  tool_mode:$("toolMode").value,temperature:existing?.temperature??0.2,timeout:existing?.timeout??180,
- connect_timeout:existing?.connect_timeout??10,max_retries:existing?.max_retries??2,max_tokens:existing?.max_tokens??4096,trust_env:existing?.trust_env??true,context_window:$("contextWindow").value?Number($("contextWindow").value):null};
+ connect_timeout:existing?.connect_timeout??10,max_retries:existing?.max_retries??2,max_tokens:Number($("completionBudget").value),preserve_tool_reasoning:existing?.preserve_tool_reasoning??null,trust_env:existing?.trust_env??true,context_window:$("contextWindow").value?Number($("contextWindow").value):null};
 }
 function invalidateConnection(){connectionVersion++;testedConnection=null;$("enterWorkspace").disabled=true;$("connectionResult").classList.add("hidden");$("useSavedModel").disabled=true;}
 function fillConnection(current){
@@ -88,6 +88,7 @@ function fillConnection(current){
  $("connectionId").readOnly=!!current && real;
  $("apiKey").value="";$("keyEnv").value=current?.credential_env||"";$("toolMode").value=current?.tool_mode||"native";
  $("contextWindow").value=current?.context_window||"";
+ $("completionBudget").value=current?.max_tokens??4096;
  $("reuseKey").checked=!!current?.ready&&!!current?.credential_configured&&!current?.credential_env;
  $("reuseKeyLabel").classList.toggle("hidden",!$("reuseKey").checked);
  $("savedConnection").value=real?current?.id||"":"";

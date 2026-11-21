@@ -6,6 +6,8 @@ BAT Agent supports an OpenAI-compatible **Chat Completions** service. Endpoint m
 
 The model name must match the deployment’s accepted identifier. Find models requests the sibling /models route (for example /v1/models) and presents up to 300 entries in a dropdown. Not every service provides this route. Failure to list models does not prove that chat is unavailable; type the known model name and test it.
 
+For NVIDIA Nemotron 3.5 Super VL request fields, reasoning budgets and the tool round trip, see the [Nemotron compatibility guide](nemotron-compatibility.md).
+
 Supported discovery capacity fields are integer context_length and max_model_len. Other formats remain unknown. Confirm deployment capacity with the service owner if necessary.
 
 In model settings, use **Add model**, give it a unique connection name, test the connection, then select **Save & use model**. Each connection has its own endpoint, model identifier, credentials, tool protocol and context limit. Select an existing entry and click **Use saved model**, or switch from the chat's model dropdown. The browser remembers the active connection. The next message sends the current conversation history to the newly selected endpoint. Start a new conversation when you want the other endpoint to receive fresh context.
@@ -31,7 +33,7 @@ The result lists observations from that request, including network establishment
 
 A chat test proves that the selected endpoint/model can answer chat. It does not prove tool calling works. In the workbench, Test model and tools sends a synthetic echo function and returns its result to the model. It never runs files or commands.
 
-The header shows the latest result for the selected connection. Click it to send a short chat probe with the saved settings. The workbench also checks a newly selected connection and refreshes an old result roughly every two minutes while visible and idle. The probe sends only a short test prompt and uses the configured service.
+The header shows the latest result for the selected connection. Click it to send a short chat probe with the saved settings. The workbench also checks a newly selected connection and refreshes an old result roughly every two minutes while visible and idle. A valid response that reaches the short probe's output limit establishes reachability. Use Test connection for a complete answer and Test model and tools for the round trip.
 
 ## Troubleshooting
 

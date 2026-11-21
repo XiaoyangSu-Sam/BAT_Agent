@@ -14,6 +14,8 @@ connect_timeout: 10
 max_retries: 2
 max_tokens: 4096
 tool_mode: native  # native | json (explicit fallback) | disabled (chat only)
+# Preserve same-turn reasoning for native tools. Omit to use the model default.
+# preserve_tool_reasoning: false
 trust_env: true   # honor company HTTP(S)_PROXY / NO_PROXY and certificate environment
 
 # Optional verified capacity (tokens), used by the context ring.

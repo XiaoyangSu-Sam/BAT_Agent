@@ -23,6 +23,7 @@ class ModelInput(BaseModel):
     connect_timeout: float = Field(default=10, gt=0, le=120)
     max_retries: int = Field(default=2, ge=0, le=5)
     max_tokens: int = Field(default=4096, gt=0, le=131072)
+    preserve_tool_reasoning: bool | None = None
     create_only: bool = False
 
     @field_validator("endpoint", "model", mode="before")
@@ -38,6 +39,7 @@ def connection_config(value, settings=None):
                       endpoint_mode=value.endpoint_mode,
                       tool_mode=value.tool_mode, temperature=value.temperature,
                       timeout=value.timeout, trust_env=value.trust_env, context_window=value.context_window,
+                      preserve_tool_reasoning=value.preserve_tool_reasoning,
                       connect_timeout=value.connect_timeout, max_retries=value.max_retries, max_tokens=value.max_tokens)
     cfg.url()
     if value.auth_mode == "session":

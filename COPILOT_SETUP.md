@@ -1,6 +1,6 @@
 # Set up BAT Agent with Copilot
 
-For an existing v0.7.0 installation, use the [v0.7.1 changed-file list and update prompt](docs/updates/v0.7.1.md). For v0.6.1, see the [v0.7.0 update](docs/updates/v0.7.0.md). Keep the [development and README rules](docs/development.md) with the imported documentation.
+For an existing v0.7.1 installation, use the [v0.7.2 changed-file list and update prompt](docs/updates/v0.7.2.md). Earlier imports are documented in the [v0.7.1 update](docs/updates/v0.7.1.md) and [v0.7.0 update](docs/updates/v0.7.0.md). Keep the [development and README rules](docs/development.md) with the imported documentation.
 
 Open the destination project in VS Code. Give Copilot this instruction together with this file:
 

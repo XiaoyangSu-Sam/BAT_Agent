@@ -132,22 +132,89 @@ def test_invalid_response():
         validate_reply(data)
     assert exc.value.code=="output_truncated"
 
-def test_full_native_tool_roundtrip():
+@pytest.mark.parametrize("echo_tool_result,expected", [(True, "passed"), (False, "result_not_confirmed")])
+def test_full_native_tool_roundtrip(echo_tool_result, expected):
     requests=[]
+    nonce = None
     def handler(req):
+        nonlocal nonce
         body=json.loads(req.content);requests.append(body)
+        assert body["stream"] is False
+        assert req.headers["accept"] == "application/json"
         if len(requests)==1:
             return httpx.Response(200,json=response())
         if len(requests)==2:
             nonce=body["messages"][-1]["content"].split("value ")[1].split(".")[0]
-            return httpx.Response(200,json=response(None,[{"id":"probe_1","type":"function",
-                "function":{"name":"echo_probe","arguments":json.dumps({"value":nonce})}}]))
+            reply = response(None, [{"id": "probe_1", "type": "function",
+                "function": {"name": "echo_probe", "arguments": json.dumps({"value": nonce})}}])
+            reply["choices"][0]["message"]["reasoning"] = "Use the diagnostic tool."
+            return httpx.Response(200, json=reply)
         assert body["messages"][-1]["role"]=="tool"
         assert body["messages"][-1]["tool_call_id"]=="probe_1"
-        return httpx.Response(200,json=response(json.loads(body["messages"][-1]["content"])["value"]))
-    cfg=ModelConfig(endpoint="http://host/v1")
+        assert body["messages"][-2]["reasoning_content"] == "Use the diagnostic tool."
+        result = json.loads(body["messages"][-1]["content"])["result"]
+        assert result != nonce
+        return httpx.Response(200, json=response(result if echo_tool_result else nonce))
+    cfg=ModelConfig(endpoint="http://host/v1", model="nvidia/nemotron-3.5-super-vl-120b-a12b")
     result=asyncio.run(diagnose(cfg,lambda c:ModelClient(c,httpx.MockTransport(handler))))
-    assert result["chat"]=="passed" and result["tools"]=="passed"
+    assert result["chat"]=="passed" and result["tools"]==expected
+
+
+def test_unexpected_sse_body_is_not_read_or_dispatched():
+    class UnexpectedStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            pytest.fail("A non-streaming request must stop at the SSE headers")
+            yield b""
+
+    def handle(request):
+        assert request.headers["accept"] == "application/json"
+        return httpx.Response(200, headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                              stream=UnexpectedStream())
+
+    client = ModelClient(ModelConfig(endpoint="https://model.invalid/v1"), httpx.MockTransport(handle))
+    with pytest.raises(HarnessError) as exc:
+        asyncio.run(client.complete([{"role": "user", "content": "hello"}], [], quiet))
+    assert exc.value.code == "unexpected_stream"
+
+
+@pytest.mark.parametrize("payload", [
+    {"choices": [None]},
+    {"choices": [{"message": []}]},
+    {"choices": [{"finish_reason": "tool_calls", "message": {"content": "missing call"}}]},
+    response(None, [{"id": "partial", "type": "function",
+                     "function": {"name": "example", "arguments": '{"path":'}}]),
+])
+def test_malformed_reply_becomes_a_protocol_error(payload):
+    with pytest.raises(HarnessError) as exc:
+        validate_reply(payload)
+    assert exc.value.code == "invalid_model_response"
+
+
+def test_redirect_does_not_forward_credentials():
+    urls = []
+
+    def handle(request):
+        urls.append(str(request.url))
+        assert request.headers["authorization"] == "Bearer fixture-secret"
+        return httpx.Response(307, headers={"location": "https://other.invalid/v1/chat/completions"})
+
+    cfg = ModelConfig(endpoint="https://model.invalid/v1", api_key="fixture-secret")
+    with pytest.raises(HarnessError) as exc:
+        asyncio.run(ModelClient(cfg, httpx.MockTransport(handle)).complete([], [], quiet))
+    assert exc.value.code == "endpoint_redirect"
+    assert urls == ["https://model.invalid/v1/chat/completions"]
+
+
+@pytest.mark.parametrize("timeout_type,stage", [(httpx.ConnectTimeout, "network"), (httpx.ReadTimeout, "response")])
+def test_transport_reports_connect_and_read_timeout_separately(timeout_type, stage):
+    def handle(request):
+        raise timeout_type("fixture timeout", request=request)
+
+    cfg = ModelConfig(endpoint="https://model.invalid/v1", max_retries=0)
+    with pytest.raises(HarnessError) as exc:
+        asyncio.run(ModelClient(cfg, httpx.MockTransport(handle)).complete([], [], quiet))
+    assert exc.value.code == "model_timeout"
+    assert exc.value.stage == stage and exc.value.retryable
 
 def test_multimodel_precedence(settings):
     folder=settings.root/"config";folder.mkdir()

@@ -31,6 +31,7 @@ If a working curl request uses a custom path, select **Exact request URL** on th
 | tool_mode | native | native, json or disabled |
 | trust_env | true | Honor proxy/certificate environment |
 | context_window | null | Optional confirmed model capacity, 1,024–10,000,000 tokens |
+| preserve_tool_reasoning | null | Auto for the canonical Nemotron 3.5 Super VL model ID. Set true or false to override native tool continuation per connection. |
 
 Capacity is display metadata. The app cannot enforce the model’s actual tokenizer limit. The local context character guard is separate. Retryable statuses are 408/429/500/502/503/504; backoff is bounded. Tool side effects are never automatically retried by the transport.
 
@@ -85,7 +86,9 @@ Errors use {error:{code,message,stage,retryable,...}}. Validation errors never e
 | POST /api/sessions/{id}/execution-approval | {allow_all:false}; revokes the conversation override; cannot grant it |
 | POST /api/runs/{id}/cancel | Stop task and supervised process |
 
-Model input includes id, endpoint, endpoint_mode (auto/exact), model, auth_mode (none/env/session/saved), api_key_env, session_api_key, tool_mode, temperature, timeout, connect_timeout, max_retries, max_tokens, trust_env and optional context_window. saved reuses the already configured credential for the same id; it is not a new storage mode.
+Model input includes id, endpoint, endpoint_mode (auto/exact), model, auth_mode (none/env/session/saved), api_key_env, session_api_key, tool_mode, temperature, timeout, connect_timeout, max_retries, max_tokens, trust_env, optional context_window and optional preserve_tool_reasoning. The saved auth mode reuses the configured credential for the same id.
+
+The saved-model check reports reply_status as complete or output_truncated. A truncated short probe with evidence of generated tokens establishes reachability. The unsaved connection test requires a complete text response.
 
 Workspace edits, folder changes, connection changes/tests and Skill refresh are blocked during a running task. Task-local tools are sequential.
 

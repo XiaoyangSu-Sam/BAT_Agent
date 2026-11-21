@@ -23,6 +23,14 @@ class ModelConfig(BaseModel):
     tool_mode: Literal["native", "json", "disabled"] = "native"
     trust_env: bool = True
     context_window: int | None = Field(default=None, ge=1024, le=10000000)
+    preserve_tool_reasoning: bool | None = None
+
+    def continues_tool_reasoning(self):
+        if self.tool_mode != "native":
+            return False
+        if self.preserve_tool_reasoning is not None:
+            return self.preserve_tool_reasoning
+        return self.model.lower() == "nvidia/nemotron-3.5-super-vl-120b-a12b"
 
     @field_validator("api_key", mode="before")
     @classmethod
@@ -43,9 +51,12 @@ class ModelConfig(BaseModel):
         return value
 
     def url(self):
-        p = urlsplit(self.endpoint.strip())
-        if p.scheme not in ("http", "https") or not p.hostname or p.username or p.password or p.query or p.fragment:
-            raise HarnessError("invalid_endpoint", "Use an http(s) endpoint without URL credentials, query or fragment.", "configuration")
+        try:
+            p = urlsplit(self.endpoint.strip())
+            if p.port == 0 or p.scheme not in ("http", "https") or not p.hostname or p.username or p.password or p.query or p.fragment:
+                raise ValueError("Invalid endpoint")
+        except ValueError as exc:
+            raise HarnessError("invalid_endpoint", "Use an http(s) endpoint with a valid host and port, without URL credentials, query or fragment.", "configuration") from exc
         if self.endpoint_mode == "exact":
             return urlunsplit((p.scheme, p.netloc, p.path, "", ""))
         path = p.path.rstrip("/")

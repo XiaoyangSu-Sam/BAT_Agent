@@ -35,13 +35,17 @@ class Handler(BaseHTTPRequestHandler):
         metrics["authenticated" if self.headers.get("Authorization") else "anonymous"]+=1
         if self.path.startswith("/bad"):
             return self.respond(401, {"error":"fixture authentication error"})
-        if self.path.startswith("/secondary/"):
-            if body["model"] != "qa-secondary":
+        nemotron = self.path.startswith("/secondary/")
+        if nemotron:
+            if body["model"] != "nvidia/nemotron-3.5-super-vl-120b-a12b":
                 return self.respond(404, {"error":"fixture model mismatch"})
             if body.get("max_tokens", 0) <= 256:
                 metrics["secondary_probes"] += 1
                 if metrics["secondary_probes"] == 1:
                     return self.respond(503, {"error":"fixture temporary outage"})
+                return self.respond(200, {"choices": [{"finish_reason":"length","message":{
+                    "role":"assistant", "content": None, "reasoning":"The readiness prompt is still in progress.",
+                }}], "usage": {"prompt_tokens": 18, "completion_tokens": body["max_tokens"]}})
             if body.get("tools"):
                 metrics["secondary_runs"] += 1
         messages=body["messages"]
@@ -51,6 +55,14 @@ class Handler(BaseHTTPRequestHandler):
             last=messages[-1]
             last_user=max(i for i,m in enumerate(messages) if m["role"]=="user")
             tool_messages=[m for m in messages[last_user+1:] if m["role"]=="tool"]
+            if nemotron:
+                if any("reasoning_content" in m for m in messages[:last_user]):
+                    return self.respond(400, {"error": "historical reasoning should not be replayed"})
+                if last["role"] == "tool" and not (
+                    messages[-2].get("reasoning_content") and
+                    last.get("tool_call_id") == messages[-2]["tool_calls"][0]["id"]
+                ):
+                    return self.respond(400, {"error": "expected reasoning and matching tool call id"})
             script = "qa_full_access.py" if "with Full access" in messages[last_user]["content"] else "qa_result.py"
             if last["role"]!="tool":
                 name,args="write_file",{"path":script,"content":"print(6 * 7)\n"}
@@ -63,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
                     "function":{"name":name,"arguments":json.dumps(args)}}]}
             else:
                 reply={"role":"assistant","content":f"## Result\n\nCreated and ran **{script}**. The actual output is **42**.\n\n- The script calculates 6 × 7.\n- Execution completed successfully.\n\n```python\nprint(6 * 7)\n```\n\n| Check | Result |\n| --- | --- |\n| Exit code | 0 |\n\n<img src=x onerror=window.unsafe=true>\n[Unsafe](javascript:alert(1))"}
-        reply["reasoning_content"]="I will use the registered tools to verify the result."
+        reply["reasoning" if nemotron else "reasoning_content"]="I will use the registered tools to verify the result."
         time.sleep(1.5 if body.get("tools") else 0.15)
         self.respond(200, {"choices":[{"message":reply,"finish_reason":"stop"}],
             "usage":{"prompt_tokens":2048,"completion_tokens":128,"total_tokens":2176}})

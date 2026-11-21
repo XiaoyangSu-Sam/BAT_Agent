@@ -10,6 +10,8 @@ New conversations inherit the project approval policy. An explicit selection app
 
 ## Next work
 
+Before Plan Mode, validate the production-like connection with **Test connection** and **Test model and tools**. Follow the [Nemotron compatibility contract](nemotron-compatibility.md) for the exact deployment and verify a multi-turn text exchange.
+
 1. **Plan Mode next.** Ordinary chat already asks the model to identify the goal, constraints and success checks for multi-step work. Add an explicit mode that exposes only read tools. Return a short plan with decisions, open questions and acceptance criteria. A user action switches from planning to execution, where the selected approval policy applies. Test the restriction at the runtime boundary for both native and JSON tools.
 2. **Conversation compaction after that.** Start with compaction on demand within one conversation. Preserve the original transcript, retain recent complete turns and tool call/result pairs, and summarize decisions, constraints, changed files, test evidence and open work. Define and test when an automatic threshold should offer compaction. Store the summary with provenance and support rebuilding it from the transcript. Keep permission state and secrets outside the summary. Measure long-chat recovery and token use before enabling automation.
 

@@ -133,12 +133,21 @@ def create_app(root=None, model_factory=None):
                 checks.append(data)
         started = time.monotonic()
         client = (model_factory or ModelClient)(cfg)
-        reply = await client.complete([{"role": "user", "content": "Reply with OK."}], [], observe, tools=False)
-        if not reply.get("content") and not (brief and reply.get("_reasoning")):
-            raise HarnessError("invalid_model_response", "The endpoint did not return a text response.", "model")
+        reply_status = "complete"
+        verification = "Valid model reply received"
+        try:
+            reply = await client.complete([{"role": "user", "content": "Reply with OK."}], [], observe, tools=False)
+        except HarnessError as error:
+            if not (brief and error.code == "output_truncated" and error.details.get("generated_output")):
+                raise
+            reply_status = "output_truncated"
+            verification = "Endpoint responded. The short probe reached its token limit."
+        else:
+            if not reply.get("content") or reply.get("tool_calls"):
+                raise HarnessError("invalid_model_response", "The endpoint did not return a text response.", "model")
         return {"connected": True, "model": cfg.model, "endpoint": cfg.url(),
-                "elapsed_ms": round((time.monotonic()-started)*1000), "message": "Connection successful",
-                "checks": checks + [{"phase":"verified", "message":"Valid model reply received"}]}
+                "elapsed_ms": round((time.monotonic()-started)*1000), "message": verification,
+                "reply_status": reply_status, "checks": checks + [{"phase": "verified", "message": verification}]}
 
     @app.post("/api/models/test")
     async def test_connection(value: ModelInput):
