@@ -24,6 +24,8 @@ class Store:
             columns = {row[1] for row in db.execute("PRAGMA table_info(sessions)")}
             if "allow_all_execution" not in columns:
                 db.execute("ALTER TABLE sessions ADD COLUMN allow_all_execution INTEGER NOT NULL DEFAULT 0")
+            if "approval_mode" not in columns:
+                db.execute("ALTER TABLE sessions ADD COLUMN approval_mode TEXT")
             db.execute("UPDATE runs SET status='interrupted' WHERE status IN ('running','awaiting_approval','cancelling')")
 
     def connect(self):
@@ -31,17 +33,24 @@ class Store:
         db.row_factory = sqlite3.Row
         return db
 
-    def create_session(self, title="New task"):
+    def create_session(self, title="New task", approval_mode=None):
         key = uuid.uuid4().hex
         with self.connect() as db:
-            db.execute("INSERT INTO sessions(id,title,created,messages) VALUES (?,?,?,?)", (key, title[:100], time.time(), "[]"))
+            db.execute("INSERT INTO sessions(id,title,created,messages,approval_mode) VALUES (?,?,?,?,?)",
+                       (key, title[:100], time.time(), "[]", approval_mode))
         return self.session(key)
 
     def sessions(self):
         with self.connect() as db:
-            return [dict(r) for r in db.execute("""SELECT s.id,s.title,s.created,s.allow_all_execution,
+            return [dict(r) for r in db.execute("""SELECT s.id,s.title,s.created,s.allow_all_execution,s.approval_mode,
                 COALESCE((SELECT MAX(r.created) FROM runs r WHERE r.session_id=s.id),s.created) AS updated
                 FROM sessions s ORDER BY updated DESC LIMIT 200""")]
+
+    def set_approval_mode(self, key, mode):
+        with self.connect() as db:
+            changed = db.execute("UPDATE sessions SET approval_mode=?, allow_all_execution=0 WHERE id=?", (mode, key))
+            if changed.rowcount != 1:
+                raise KeyError(key)
 
     def set_execution_approval(self, key, allow_all):
         with self.connect() as db:

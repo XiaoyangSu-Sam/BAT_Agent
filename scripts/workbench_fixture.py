@@ -18,7 +18,7 @@ root = Path(tempfile.mkdtemp(prefix="bat-workbench-qa-"))
 (root/"workspace/long.py").write_text("\n".join("# line "+str(i)+" "+"x"*90 for i in range(500))+"\n")
 (root/"skills/local-coding").mkdir(parents=True)
 (root/"skills/local-coding/SKILL.md").write_text("---\nname: Local coding\ndescription: Read, edit and run local code.\n---\nRead the file before editing.\n")
-metrics = {"requests":0,"anonymous":0,"authenticated":0}
+metrics = {"requests":0,"anonymous":0,"authenticated":0,"secondary_probes":0,"secondary_runs":0}
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
     def respond(self, code, value):
@@ -35,6 +35,15 @@ class Handler(BaseHTTPRequestHandler):
         metrics["authenticated" if self.headers.get("Authorization") else "anonymous"]+=1
         if self.path.startswith("/bad"):
             return self.respond(401, {"error":"fixture authentication error"})
+        if self.path.startswith("/secondary/"):
+            if body["model"] != "qa-secondary":
+                return self.respond(404, {"error":"fixture model mismatch"})
+            if body.get("max_tokens", 0) <= 256:
+                metrics["secondary_probes"] += 1
+                if metrics["secondary_probes"] == 1:
+                    return self.respond(503, {"error":"fixture temporary outage"})
+            if body.get("tools"):
+                metrics["secondary_runs"] += 1
         messages=body["messages"]
         if not body.get("tools"):
             reply={"role":"assistant","content":"OK"}
@@ -42,17 +51,18 @@ class Handler(BaseHTTPRequestHandler):
             last=messages[-1]
             last_user=max(i for i,m in enumerate(messages) if m["role"]=="user")
             tool_messages=[m for m in messages[last_user+1:] if m["role"]=="tool"]
+            script = "qa_full_access.py" if "with Full access" in messages[last_user]["content"] else "qa_result.py"
             if last["role"]!="tool":
-                name,args="write_file",{"path":"qa_result.py","content":"print(6 * 7)\n"}
+                name,args="write_file",{"path":script,"content":"print(6 * 7)\n"}
             elif len(tool_messages)==1:
-                name,args="run_python_script",{"path":"qa_result.py"}
+                name,args="run_python_script",{"path":script}
             else:
                 name=None
             if name:
                 reply={"role":"assistant","content":None,"tool_calls":[{"id":uuid.uuid4().hex,"type":"function",
                     "function":{"name":name,"arguments":json.dumps(args)}}]}
             else:
-                reply={"role":"assistant","content":"## Result\n\nCreated and ran **qa_result.py**. The actual output is **42**.\n\n- The script calculates 6 × 7.\n- Execution completed successfully.\n\n```python\nprint(6 * 7)\n```\n\n| Check | Result |\n| --- | --- |\n| Exit code | 0 |\n\n<img src=x onerror=window.unsafe=true>\n[Unsafe](javascript:alert(1))"}
+                reply={"role":"assistant","content":f"## Result\n\nCreated and ran **{script}**. The actual output is **42**.\n\n- The script calculates 6 × 7.\n- Execution completed successfully.\n\n```python\nprint(6 * 7)\n```\n\n| Check | Result |\n| --- | --- |\n| Exit code | 0 |\n\n<img src=x onerror=window.unsafe=true>\n[Unsafe](javascript:alert(1))"}
         reply["reasoning_content"]="I will use the registered tools to verify the result."
         time.sleep(1.5 if body.get("tools") else 0.15)
         self.respond(200, {"choices":[{"message":reply,"finish_reason":"stop"}],

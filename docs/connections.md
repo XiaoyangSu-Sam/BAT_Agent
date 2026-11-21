@@ -8,7 +8,9 @@ The model name must match the deployment’s accepted identifier. Find models re
 
 Supported discovery capacity fields are integer context_length and max_model_len. Other formats remain unknown. Confirm deployment capacity with the service owner if necessary.
 
-Saved connections automatically fill their settings. Choose New connection to add another. The workbench dropdown switches between usable connections without retyping endpoints or credentials. An existing connection can be edited and tested again before saving. This release does not include a Delete connection button; see the configuration guide for removing a saved entry.
+In model settings, use **Add model**, give it a unique connection name, test the connection, then select **Save & use model**. Each connection has its own endpoint, model identifier, credentials, tool protocol and context limit. Select an existing entry and click **Use saved model**, or switch from the chat's model dropdown. The browser remembers the active connection. The next message sends the current conversation history to the newly selected endpoint. Start a new conversation when you want the other endpoint to receive fresh context.
+
+Existing settings can be edited and tested before saving. See the configuration guide to remove a saved entry.
 
 ## API key is optional
 
@@ -28,6 +30,8 @@ The test makes one actual chat request, with retries disabled and a maximum tota
 The result lists observations from that request, including network establishment, TLS where applicable, sending and receiving. It does not use ICMP ping: a server can block ping while its model API works. Network establishment may refer to a configured proxy, not a direct connection to the final host.
 
 A chat test proves that the selected endpoint/model can answer chat. It does not prove tool calling works. In the workbench, Test model and tools sends a synthetic echo function and returns its result to the model. It never runs files or commands.
+
+The header shows the latest result for the selected connection. Click it to send a short chat probe with the saved settings. The workbench also checks a newly selected connection and refreshes an old result roughly every two minutes while visible and idle. The probe sends only a short test prompt and uses the configured service.
 
 ## Troubleshooting
 

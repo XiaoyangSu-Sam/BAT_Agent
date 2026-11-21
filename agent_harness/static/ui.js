@@ -2,6 +2,13 @@
 const $=id=>document.getElementById(id), token=document.querySelector('meta[name="harness-token"]').content;
 let config,sessionId=null,runId=null,after=0,generation=0,approvalId,events=[],busy=false,selectedSkills=new Set();
 let sessionRecords=[];
+let draftApprovalMode = null;
+let savingApprovalMode = false;
+const approvalDescriptions = {
+ all: "Ask before editing files or running code",
+ execution: "Allow workspace edits and ask before running code",
+ trusted: "Allow workspace edits and execution in this conversation"
+};
 const toolCards=new Map(),requestedTools=new Map(),changedPaths=new Set();
 const statuses={running:"Running",awaiting_approval:"Awaiting approval",completed:"Completed",failed:"Failed",cancelled:"Stopped",interrupted:"Previous task interrupted",cancelling:"Stopping"};
 const toolLabels={write_skill_file:"Write Skill file",list_files:"Explore files",read_file:"Read file",search_files:"Search code",write_file:"Write file",edit_file:"Edit code",run_command:"Run command",run_python_script:"Run Python",run_notebook:"Run notebook",list_skills:"List Skills",read_skill:"Read Skill",read_skill_resource:"Read Skill resource"};
@@ -25,19 +32,21 @@ function scrollChat(){$("messages").scrollTop=$("messages").scrollHeight;}
 function setBusy(value){
  busy=value;if(!value&&modelTimer){modelTimer.node.textContent="Model request ended · timing unavailable";stopModelTimer();}for(const id of ["send","model","newSession","sessions","settingsButton","newFile","openFolder","folderActivity","emptyOpenFolder","refreshSkills","diagnose"])$(id).disabled=value;
  for(const button of document.querySelectorAll(".session-item"))button.disabled=value;
+ $("policy").disabled = value || savingApprovalMode;
+ if (savingApprovalMode) $("send").disabled = true;
  $("cancel").classList.toggle("hidden",!value);$("thinking").classList.toggle("hidden",!value);if(window.editorReady)editor.readOnly(value);$("diagnose").disabled=value||!$("model").value;$("connectFromWorkspace").disabled=value;updateEditorStatus();
 }
 function showConfig(){
- const selected=$("model").value;$("model").replaceChildren();
+ const selected=$("model").value || localStorage.getItem("bat.model");$("model").replaceChildren();
  for(const m of config.models){const o=el("option",m.model+(m.id!=="default"?" · "+m.id:""));o.value=m.id;o.disabled=!m.ready;$("model").append(o);}
  const wanted=config.models.find(m=>m.id===selected&&m.ready)||config.models.find(m=>m.id===config.default_model&&m.ready)||config.models.find(m=>m.ready);
  if(!wanted){const option=el("option","No model connected");option.value="";$("model").prepend(option);}
  $("model").value=wanted?.id||"";$("modelNotice").classList.toggle("hidden",!!wanted);$("diagnose").disabled=busy||!wanted;
  const project=config.workspace.split(/[\\/]/).filter(Boolean).pop()||"workspace";
  $("projectName").textContent=project;$("workspaceLabel").textContent=project;$("workspaceLabel").title=config.workspace;
- $("policy").textContent={execution:"Approve execution",all:"Approve changes and execution",trusted:"Auto-execute"}[config.execution.approval_mode];showProvider();
+ renderApprovalMode();
+ showProvider();
 }
-function showProvider(){const m=config.models.find(m=>m.id===$("model").value);const demo=m?.provider==="fake";$("providerBadge").textContent=demo?"Offline demo":m?.model||"Not connected";$("providerBadge").classList.toggle("demo",demo);}
 async function loadSkills(){
  const data=await api("/skills");$("skillCount").textContent=data.skills.length;$("skills").replaceChildren();
  const ids=new Set(data.skills.map(s=>s.id));selectedSkills=new Set([...selectedSkills].filter(id=>ids.has(id)));updateContext();
@@ -56,27 +65,74 @@ function renderSessions(){
  button.onclick=()=>loadSession(s.id).catch(e=>error(e.message));host.append(button);}
  if(!matches.length)host.append(el("p",query?"No matching conversations.":"Your conversations will appear here.","session-empty"));
  const current=sessionRecords.find(s=>s.id===sessionId);$("conversationTitle").textContent=current?.title||"New conversation";
- const automatic=!!current?.allow_all_execution;$("executionPolicyLabel").textContent=automatic?"Execution allowed in this conversation":config?.execution.approval_mode==="trusted"?"Execution allowed by project settings":"Execution approval required";$("resetExecution").classList.toggle("hidden",!automatic);
+ renderApprovalMode();
+}
+function renderApprovalMode() {
+ const current = sessionRecords.find(s => s.id === sessionId);
+ const mode = current?.approval_mode || draftApprovalMode || config.execution.approval_mode;
+ const automatic = !!current?.allow_all_execution && mode !== "trusted";
+ $("policy").value = mode;
+ $("policy").title = approvalDescriptions[mode];
+ $("executionPolicyLabel").textContent = automatic
+  ? "Execution allowed in this conversation"
+  : approvalDescriptions[mode];
+ $("resetExecution").classList.toggle("hidden", !automatic);
+}
+
+async function changeApprovalMode() {
+ const mode = $("policy").value;
+ if (!sessionId) {
+  draftApprovalMode = mode;
+  renderApprovalMode();
+  return;
+ }
+ const id = sessionId;
+ savingApprovalMode = true;
+ $("policy").disabled = true;
+ $("send").disabled = true;
+ try {
+  const result = await api("/sessions/" + id + "/approval-mode", {approval_mode: mode});
+  const current = sessionRecords.find(s => s.id === id);
+  if (current) Object.assign(current, result);
+ } catch (e) {
+  error(e.message);
+ } finally {
+  savingApprovalMode = false;
+  $("policy").disabled = busy;
+  $("send").disabled = busy;
+  renderApprovalMode();
+ }
 }
 async function listSessions(){sessionRecords=await api("/sessions");renderSessions();return sessionRecords;}
 function resetRun(){$("activityCount").textContent="";stopModelTimer();events=[];after=0;runId=null;toolCards.clear();requestedTools.clear();changedPaths.clear();$("changeCount").textContent="0";$("events").replaceChildren();$("changes").replaceChildren();$("output").textContent="Process output will appear here.";$("approval").classList.add("hidden");$("runStatus").textContent="Ready";contextUsage={};renderContext();communication("idle","Ready · No request in progress");}
 function clearMessages(){for(const node of [...$("messages").children])if(node.id!=="welcome")node.remove();$("welcome").classList.remove("hidden");}
 async function loadSession(id){if(busy&&id!==sessionId){error("Stop the current task before switching conversations.");return;}$("workArea").classList.remove("history-open");generation++;sessionId=id;localStorage.setItem("bat.session",id||"");clearMessages();resetRun();setBusy(false);error("");
+ draftApprovalMode=null;
  renderSessions();if(!id){await listSessions();return;}const s=await api("/sessions/"+id);for(const m of s.messages)if(["user","assistant"].includes(m.role))addMessage(m.role,m.content,m._reasoning,m._model_elapsed_ms);await listSessions();
  if(s.runs.length){runId=s.runs[0].id;await poll(++generation,true);}}
-function renderEvent(event,initial=false){
+function renderEvent(event,initial,modelId){
  events.push(event);$("activityCount").textContent=events.length+" events";after=Math.max(after,event.seq);const d=event.data;
  const detail=el("details",undefined,"event");detail.append(el("summary",(d.name||event.type)+" · "+new Date(event.time*1000).toLocaleTimeString()),el("pre",JSON.stringify(d,null,2)));$("events").append(detail);
  if(event.type==="model_wait_started")beginModelTimer(d,initial);
  if(event.type==="model_wait_finished")finishModelTimer(d,initial);
  if(event.type==="model_request")communication("sending","Sending request · "+d.model);
  if(event.type==="communication")communication(d.phase,d.message);
- if(event.type==="model_response")communication("received","Response received");
- if(event.type==="context_usage"){contextUsage={...d};renderContext();}
- if(event.type==="token_usage"){contextUsage={...contextUsage,...d};renderContext();}
+ if(event.type==="model_response"){
+  communication("received","Response received");
+  if (!initial) recordModelHealth(modelId, true, "Valid model reply received", event.time * 1000);
+ }
+ if(modelId === $("model").value && event.type==="context_usage"){contextUsage={...d};renderContext();}
+ if(modelId === $("model").value && event.type==="token_usage"){contextUsage={...contextUsage,...d};renderContext();}
  if(event.type==="reasoning"&&!initial){if(d.available){$("messages").append(reasoningElement(d.content));scrollChat();}else reasoningUnavailable();}
  if(event.type==="run_started"){communication("sending","Starting · "+d.model);}
- if(event.type==="error")communication("failed","Request failed · "+d.message);
+ if(event.type==="error"){
+  communication("failed","Request failed · "+d.message);
+  const connectionFailure = ["http", "network", "tls", "response"].includes(d.stage)
+   || ["invalid_model_response", "invalid_json_response"].includes(d.code);
+  if (!initial && connectionFailure) {
+   recordModelHealth(modelId, false, d.message, event.time * 1000);
+  }
+ }
  if(event.type==="completed")communication("idle","Ready · Last task completed");
  if(event.type==="cancelled")communication("idle","Stopped · No request in progress");
  if(event.type==="model_retry")communication("retrying","Retrying connection…");
@@ -87,14 +143,14 @@ function renderEvent(event,initial=false){
  if(result.scope==="skill"){loadSkills().catch(e=>error(e.message));}
  if(result.diff!==undefined){const displayPath=result.scope==="skill"?"skills/"+result.skill_id+"/"+result.path:result.path;changedPaths.add(displayPath);$("changeCount").textContent=changedPaths.size;const change=el("details",undefined,"change");change.open=true;const summary=el("summary",displayPath);summary.onclick=()=>{if(result.scope==="skill")showSkill(result.skill_id);else openFile(result.path).catch(e=>error(e.message));};change.append(summary,el("pre",result.diff||"No text changes"));$("changes").append(change);if(result.scope!=="skill")syncChangedFile(result.path).catch(e=>error(e.message));}
  }
- if(event.type==="approval_required"){$("allowAll").classList.toggle("hidden",d.kind!=="execute");communication("approval","Waiting for your approval");approvalId=d.approval_id;$("approvalText").textContent=d.name+"\n"+JSON.stringify(d.arguments,null,2);$("approval").classList.remove("hidden");}
+ if(event.type==="approval_required"){$("allowAll").classList.toggle("hidden",!(d.can_allow_all ?? (d.kind==="execute")));communication("approval","Waiting for your approval");approvalId=d.approval_id;$("approvalText").textContent=d.name+"\n"+JSON.stringify(d.arguments,null,2);$("approval").classList.remove("hidden");}
  if(event.type==="approval_policy_changed")listSessions().catch(e=>error(e.message));
  if(event.type==="approval_resolved")$("approval").classList.add("hidden");
 }
 async function poll(mine,initial=false){
  if(mine!==generation||!runId)return;
  try{const data=await api("/runs/"+runId+"?after="+after);if(mine!==generation)return;
- for(const event of data.events){renderEvent(event,initial);if(!initial&&event.type==="assistant")addMessage("assistant",event.data.content);}
+ for(const event of data.events){renderEvent(event,initial,data.model_id);if(!initial&&event.type==="assistant")addMessage("assistant",event.data.content);}
  const active=["running","awaiting_approval","cancelling"].includes(data.status);setBusy(active);$("runStatus").textContent=statuses[data.status]||data.status;
  if(!active){$("approval").classList.add("hidden");await refreshFiles();await syncOpenFiles();}
  if(data.error)error(data.error.message+(data.error.suggestions?" "+data.error.suggestions.join(" "):""));
@@ -119,17 +175,33 @@ function reasoningUnavailable(){
 }
 function updateReasoning(){for(const box of document.querySelectorAll(".reasoning,.reasoning-unavailable"))box.classList.toggle("hidden",!$("showReasoning").checked);}
 function renderContext(){
- const d=contextUsage,usage=d.prompt_tokens,limit=d.model_context_window;
- const actual=Number.isFinite(usage)&&Number.isFinite(d.completion_tokens)&&Number.isFinite(limit);
- const total=actual?usage+(d.completion_tokens||0):0,percent=actual?Math.round(total/limit*100):null;
- const gauge=$("contextGauge");gauge.style.setProperty("--usage",actual?Math.min(100,percent)+"%":"0%");
- gauge.classList.toggle("unknown",!actual);gauge.classList.toggle("high",actual&&percent>=80);
- gauge.querySelector("span").textContent=actual?percent+"%":"—";
- let description=actual?("Last request: "+total.toLocaleString()+" / "+limit.toLocaleString()+" tokens ("+percent+"%). Input "+usage.toLocaleString()+", output "+(d.completion_tokens||0).toLocaleString()+". Usage is reported by the endpoint; capacity is configured or discovered."):"Model context percentage unavailable. "+(Number.isFinite(usage)?"The endpoint reported "+usage.toLocaleString()+" input tokens. ":"")+(limit?"Waiting for endpoint token usage.":"The model’s context capacity is not known. Set a confirmed capacity in connection settings.");
- if(d.characters)description+=" Local input guard: "+Math.round(d.characters/d.character_limit*100)+"% ("+d.characters.toLocaleString()+" / "+d.character_limit.toLocaleString()+" characters). This is not a model token count.";
- if(d.model)description="Model: "+d.model+". "+description;
- description+=" Usage refers to the latest request, not a cumulative billing total. Start a new conversation when context becomes full.";
- gauge.title=description;gauge.setAttribute("aria-label",actual?"Context usage "+percent+" percent":"Context usage unknown");$("contextDetails").textContent=description;
+ const {prompt_tokens, completion_tokens, model_context_window, characters, character_limit} = contextUsage;
+ const tokensKnown = model_context_window > 0
+  && Number.isFinite(prompt_tokens) && Number.isFinite(completion_tokens);
+ const localKnown = character_limit > 0 && Number.isFinite(characters);
+ const total = tokensKnown ? prompt_tokens + completion_tokens : characters;
+ const limit = tokensKnown ? model_context_window : character_limit;
+ const ratio = tokensKnown || localKnown ? Math.max(0, total / limit) : null;
+ const percent = ratio === null ? null : Math.floor(Math.max(0, total * 100 / limit));
+ const gauge = $("contextGauge");
+ gauge.style.setProperty("--usage", ratio === null ? "0%" : Math.min(100, ratio * 100) + "%");
+ gauge.dataset.level = ratio === null ? "unknown" : ratio >= 0.90 ? "critical" : ratio >= 0.70 ? "warning" : "normal";
+ gauge.querySelector("span").textContent = percent === null ? "—" : percent + "%";
+ $("contextBasis").classList.toggle("hidden", tokensKnown || !localKnown);
+ const label = tokensKnown ? "Model context" : localKnown ? "Local input limit" : "Context usage";
+ let detail;
+ if (tokensKnown) {
+  detail = `Last request used ${total.toLocaleString()} / ${limit.toLocaleString()} tokens (${percent}%). `
+   + `Input ${prompt_tokens.toLocaleString()}, output ${completion_tokens.toLocaleString()}.`;
+ } else if (localKnown) {
+  detail = `Local input used ${characters.toLocaleString()} / ${character_limit.toLocaleString()} characters (${percent}%). `
+   + "Model token usage or context capacity is unavailable.";
+ } else {
+  detail = "Context usage appears after a request. Set the model's confirmed context window in connection settings if it is unavailable.";
+ }
+ gauge.title = detail;
+ gauge.setAttribute("aria-label", label + (percent === null ? " unknown" : " " + percent + " percent"));
+ $("contextDetails").textContent = detail;
 }
 
 let modelTimer=null;

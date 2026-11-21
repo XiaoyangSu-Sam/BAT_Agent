@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 — model switching and conversation controls
+- Added a conversation approval selector for Ask for approval, Approval for me, and Full access.
+- Made adding and switching saved models explicit. The active connection shows the latest chat check and can be checked from the header.
+- Added green, yellow and red context levels, with a labeled fallback for the local input limit. Reduced the composer height and kept it resizable.
+- Guided the assistant to identify scope and verification steps in ordinary chat, and documented the order for Plan Mode and context compaction.
+
 ## 0.7.0 — conversation workspace and execution approvals
 - Made chat the main surface, with searchable conversation history on the left and an optional right file editor that can close, resize or expand.
 - Added Approve once, Allow all for this conversation, and revocation. Conversation permission persists across restarts; other conversations and write approval rules stay separate.

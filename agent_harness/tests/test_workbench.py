@@ -99,6 +99,35 @@ def test_failed_connection_and_invalid_input_do_not_echo_key(settings):
         assert invalid.status_code == 422 and "DO_NOT_ECHO" not in invalid.text
         assert not (settings.root / "config/environment.yaml").exists()
 
+def test_saved_model_checks_use_the_selected_endpoint_and_credential(settings, monkeypatch):
+    monkeypatch.setenv("SECOND_MODEL_KEY", "fixture-secondary-key")
+    seen = []
+
+    def handle(request):
+        body = json.loads(request.content)
+        assert "tools" not in body and body["max_tokens"] <= 256
+        assert body["messages"] == [{"role": "user", "content": "Reply with OK."}]
+        seen.append((str(request.url), body["model"], request.headers.get("authorization")))
+        if body["model"] == "beta":
+            return httpx.Response(503)
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "OK"}}]})
+
+    factory = lambda cfg: ModelClient(cfg, transport=httpx.MockTransport(handle))
+    with client_for(settings.root, factory) as client:
+        alpha = {"id": "first", "endpoint": "https://alpha.invalid/v1", "model": "alpha", "create_only": True}
+        beta = {"id": "second", "endpoint": "https://beta.invalid/custom", "endpoint_mode": "exact",
+                "model": "beta", "auth_mode": "env", "api_key_env": "SECOND_MODEL_KEY", "create_only": True}
+        assert client.post("/api/models", json=alpha).status_code == 200
+        assert client.post("/api/models", json=beta).status_code == 200
+        duplicate = client.post("/api/models", json={**beta, "id": "first"})
+        assert duplicate.json()["error"]["code"] == "connection_exists"
+        assert client.post("/api/models/first/check", json={}).json()["connected"]
+        failed = client.post("/api/models/second/check", json={})
+        assert failed.json()["error"]["http_status"] == 503
+        assert "fixture-secondary-key" not in failed.text
+    assert seen == [("https://alpha.invalid/v1/chat/completions", "alpha", None),
+                    ("https://beta.invalid/custom", "beta", "Bearer fixture-secondary-key")]
+
 def test_editor_reads_full_document_and_protects_conflicts(settings):
     source = "\r\n".join(f"# line {i} " + "x"*90 for i in range(600))+"\r\n"
     file = settings.workspace / "large.py"

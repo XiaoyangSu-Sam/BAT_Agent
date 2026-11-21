@@ -1,6 +1,6 @@
 # Update source in an existing environment
 
-For a selective v0.6.1 to v0.7.0 update, see the [exact file list and Copilot prompt](updates/v0.7.0.md). It also documents the conversation-state migration and rollback limits.
+For a selective update, see the file lists and Copilot prompts for [v0.7.0 to v0.7.1](updates/v0.7.1.md) and [v0.6.1 to v0.7.0](updates/v0.7.0.md).
 
 Use this procedure for an existing BAT Agent/Harness project with a working, approved Python environment, when the source update is permitted by your organization. It is a normal application update: security policies and file-source metadata stay intact. Changing from ZIP to Git or copying text does not establish approval or guarantee execution.
 

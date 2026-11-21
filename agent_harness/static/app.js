@@ -6,13 +6,14 @@ async function enterWorkbench(){
  if(sessions.some(s=>s.id===saved))await loadSession(saved);else if(sessions.length)await loadSession(sessions[0].id);
  }
  editor.readOnly(busy);
+ checkSelectedModel();
 }
 async function send(event){
- event?.preventDefault();if(busy)return;const prompt=$("prompt").value.trim();if(!prompt)return;
+ event?.preventDefault();if(busy||savingApprovalMode)return;const prompt=$("prompt").value.trim();if(!prompt)return;
  if(hasDirty()){error("Save your open files so the agent can work with your latest changes.");return;}
  if(!$("model").value){showConnection(false);return;}
  error("");setBusy(true);communication("sending","Submitting your message…");
- try{if(!sessionId){const created=await api("/sessions",{title:prompt.slice(0,60)});sessionId=created.id;localStorage.setItem("bat.session",sessionId);}
+ try{if(!sessionId){const created=await api("/sessions",{title:prompt.slice(0,60),approval_mode:draftApprovalMode});sessionId=created.id;draftApprovalMode=null;localStorage.setItem("bat.session",sessionId);}
  const context=[];if(activePath&&$("attachFile").checked)context.push("Current file: "+activePath+". Use read_file to inspect its content.");
  if(selectedSkills.size)context.push("Use these registered Skills: "+[...selectedSkills].join(", ")+". Read their instructions first.");
  const full=prompt+(context.length?"\n\n[Workspace context]\n"+context.join("\n"):"");
@@ -29,10 +30,17 @@ function toggleSkills(value){const open=value??$("skillsPanel").classList.contai
 function initAppEvents(){
  $("showReasoning").checked=localStorage.getItem("bat.reasoning")==="true";updateReasoning();
  $("showReasoning").onchange=()=>{localStorage.setItem("bat.reasoning",$("showReasoning").checked);updateReasoning();};
- $("contextGauge").onclick=()=>$("contextDetails").classList.toggle("hidden");
+ $("contextGauge").onclick=()=>{
+  const closed = $("contextDetails").classList.toggle("hidden");
+  $("contextGauge").setAttribute("aria-expanded", String(!closed));
+ };
  $("composer").onsubmit=send;$("prompt").onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")send(e);};
  $("newSession").onclick=()=>loadSession(null).catch(e=>error(e.message));
- $("model").onchange=()=>{showProvider();contextUsage={};renderContext();communication("idle","Ready · Selected model has not been tested in this task");};
+ $("model").onchange=()=>activateModel($("model").value);
+ $("policy").onchange=changeApprovalMode;
+ $("providerBadge").onclick=()=>checkSelectedModel(true);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkSelectedModel();});
+ setInterval(()=>checkSelectedModel(), 15_000);
  $("cancel").onclick=async()=>{try{$("cancel").disabled=true;await api("/runs/"+runId+"/cancel",{});}catch(e){error(e.message);}finally{$("cancel").disabled=false;}};
  $("approve").onclick=()=>decide(true);$("allowAll").onclick=()=>decide(true,true);$("deny").onclick=()=>decide(false);
  $("skillsToggle").onclick=()=>toggleSkills();$("closeSkills").onclick=()=>toggleSkills(false);$("closeSkill").onclick=()=>$("skillDialog").close();

@@ -1,13 +1,13 @@
 # BAT Agent
 
-v0.7.0 · Internal preview · From BAT Team
+v0.7.1 · Internal preview · From BAT Team
 
 A local coding workbench centered on conversation. Browse conversation history on the left, chat in the main area, and open files in an optional right editor. Close the editor for more chat space, or expand it for coding. The interface is English.
 
 - Chat with an OpenAI-compatible model; API keys are optional.
 - Read, edit and save files with conflict protection.
 - Create, register, read and execute Skills, Python scripts and optional notebooks.
-- Approve execution once, or allow all execution in the current conversation until revoked.
+- Choose a conversation approval mode and switch between saved model connections.
 - See connection diagnostics, request status, model time and available context usage.
 
 ## Start
@@ -37,10 +37,10 @@ Click **Open workspace without a model** to browse files, edit code and inspect 
 
 To chat, enter your **Endpoint**, optionally enter an **API Key**, and use **Find models** to choose a model. If listing is unavailable, enter the name supplied by your service owner. Click **Test connection**, then **Open workspace**. Saved connections appear in a dropdown.
 
-Replies arrive asynchronously as complete messages. **Show model reasoning** displays only text actually returned by the model service. **Model time** includes network and server waiting; it excludes tools and approval waits. The context ring displays known usage; unavailable data is marked unknown.
+Replies arrive asynchronously as complete messages. **Show model reasoning** displays text returned by the service. **Model time** measures the request. The colored context ring shows model token usage when available and labels its local character fallback.
 
 ## Help
 
-[v0.7.0 file-by-file update and Copilot prompt](docs/updates/v0.7.0.md) · [Setup and updates](docs/setup.md) · [Copilot setup instructions](COPILOT_SETUP.md) · [User guide](docs/user-guide.md) · [Development and README rules](docs/development.md) · [Connection help](docs/connections.md) · [Skills](docs/skills.md) · [Configuration/API](docs/configuration-api.md) · [Startup checklist](docs/deployment-checklist.md) · [Security](SECURITY.md) · [Changes](CHANGELOG.md)
+[v0.7.1 file-by-file update and Copilot prompt](docs/updates/v0.7.1.md) · [Setup and updates](docs/setup.md) · [Copilot setup instructions](COPILOT_SETUP.md) · [User guide](docs/user-guide.md) · [Development and README rules](docs/development.md) · [Connection help](docs/connections.md) · [Skills](docs/skills.md) · [Configuration/API](docs/configuration-api.md) · [Startup checklist](docs/deployment-checklist.md) · [Security](SECURITY.md) · [Changes](CHANGELOG.md)
 
 BAT Agent is a local, single-user application. Approved scripts run with your account's permissions. Keep configuration, conversations, private Skills and workspace data out of published source.

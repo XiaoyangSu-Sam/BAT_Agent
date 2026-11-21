@@ -47,7 +47,7 @@ Each model call shows **Thinking · seconds** while pending and **Model time · 
 - Waiting for your approval: no protected operation starts until you approve.
 - Ready / Failed / Stopped: the current task’s outcome.
 
-Fast transitions may appear together in one polling batch. Activity retains their ordered record. There is no permanent background connection monitor.
+Fast transitions may appear together in one polling batch. Activity retains their ordered record. The header shows the selected connection's last check. Green means a valid model reply arrived. Red means the last request or check failed. Click the status to check again. The visible idle workbench rechecks roughly every two minutes.
 
 ## Context circle
 
@@ -55,15 +55,19 @@ Click the circle near the composer for details.
 
 When the endpoint reports input and output token usage and the model’s context capacity is known, the ring shows the last request’s input + output divided by capacity. Capacity comes from a confirmed setting or supported model-list metadata. This is not cumulative cost or billing usage.
 
-When either value is unavailable the circle shows a dash. The details may still show reported input tokens and the separate local character guard. Characters are not model tokens. Capacity differs across deployments even when they share a model alias; do not guess it.
+When token counts or model capacity are unavailable, **Local** identifies the measured character usage against the local request limit. The ring starts gray before the first request for the selected connection. It fills green below 70%, yellow from 70%, and red from 90%.
 
-At 80% and above the circle changes color. Starting a new conversation reduces carried history. This release does not automatically summarize or compact context. A configured local input limit stops an oversized task with an explicit error.
+Starting a new conversation reduces carried history. A configured local input limit stops an oversized task with an explicit error. The compact composer can be resized vertically using its corner handle.
 
 ## Approvals, output and history
 
-By default, Python/commands/notebooks require approval. Review the actual arguments, then choose Approve once, Decline, or Allow all for this conversation. Declining stops the task. Allow all accepts this execution and subsequent execution tools in the same conversation, including later tasks and after page reload or server restart. It does not change other conversations or bypass file-write approvals under the all policy.
+Choose the approval mode in the footer.
 
-The sidebar shows when execution is allowed. Require approval again restores the project's configured policy for subsequent operations; it does not stop a process already running. Use Stop for the current task. A project configured as trusted still permits execution automatically after a conversation override is cleared. New conversations inherit the project policy and have no Allow all override.
+- **Ask for approval** asks before each agent file write and execution. Approve once applies to the pending operation.
+- **Approval for me** lets the agent edit files through its file tools and asks before Python, commands or notebooks. At an execution prompt, Allow all for this conversation grants subsequent execution for this chat, across reloads and restarts.
+- **Full access** allows agent edits and execution in this conversation without approval prompts. File and process rules still apply.
+
+A selection overrides the project default for that conversation and clears any prior Allow all grant. The sidebar shows when a grant is active. Require approval again removes the grant and returns to the selected policy. New conversations start with the project default. Decline stops the current run, and Stop cancels a running task.
 
 Expand Activity and output to see actual stdout, stderr and exit codes. Changes shows file diffs. Activity shows request phases, tool parameters/results, errors and usage. Export downloads the selected run’s event JSON. It may contain source code, business data and model reasoning.
 

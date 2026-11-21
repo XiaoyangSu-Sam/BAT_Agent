@@ -65,6 +65,7 @@ Errors use {error:{code,message,stage,retryable,...}}. Validation errors never e
 | GET /health | Status and version |
 | GET /api/config | Safe configuration; never returns API keys |
 | POST /api/models/test | Test unsaved connection; one actual chat request, no persistence |
+| POST /api/models/{id}/check | Probe a saved connection with a short chat request using its own settings |
 | POST /api/models/discover | Discover model identifiers via sibling /models |
 | POST /api/models | Save/add/update a named model and make it default |
 | POST /api/diagnostics/{id} | Chat + synthetic tool round-trip diagnostic |
@@ -75,8 +76,9 @@ Errors use {error:{code,message,stage,retryable,...}}. Validation errors never e
 | GET /api/skills | Registered catalog and warnings |
 | GET /api/skills/{id} | Skill instructions and resource names |
 | POST /api/skills/refresh | Refresh catalog while idle |
-| GET/POST /api/sessions | List/create conversations; create accepts {title} |
+| GET/POST /api/sessions | List/create conversations; create accepts {title,approval_mode?} |
 | GET /api/sessions/{id} | Messages and runs |
+| POST /api/sessions/{id}/approval-mode | Set {approval_mode} for an idle conversation and clear its Allow all grant |
 | POST /api/sessions/{id}/runs | Start asynchronous {prompt,model_id}; returns run_id |
 | GET /api/runs/{id}?after=N | Status and up to 200 ordered events after sequence N |
 | POST /api/runs/{id}/approval | {approval_id,approved,allow_all_execution:false}; true is valid only with approval of a pending execution tool |
@@ -91,7 +93,7 @@ Workspace edits, folder changes, connection changes/tests and Skill refresh are 
 
 Events include run_started, context_usage, step, model_wait_started, model_wait_finished, model_request, communication, model_retry, model_response, token_usage, reasoning, assistant, tool_requested, approval_required, approval_policy_changed, approval_resolved, tool_started, tool_result, completed, error and cancelled. approval_required includes the tool kind. approval_policy_changed records granting the conversation execution override.
 
-Session list responses include allow_all_execution (0/1) and updated (latest run creation time, or session creation time). The list is ordered by updated, newest first, and retains the existing 200-session limit. Startup adds the approval column to older databases with a default of 0; existing conversations are not auto-approved.
+Session lists include approval_mode (null means inherit the project default), allow_all_execution (0/1), and updated (latest run creation time or session creation time). Modes are all for Ask for approval, execution for Approval for me, and trusted for Full access. An explicit all selection requires approval for each protected operation. The upgrade adds a nullable approval_mode column and preserves prior conversation grants. Lists are ordered newest first and retain the 200-session limit.
 
 Communication phases reflect HTTP transport observations; they do not prove remote compute activity. reasoning carries only endpoint-supplied text. token_usage is the most recent request’s reported usage, not a cumulative sum. Unknown metadata stays unknown.
 

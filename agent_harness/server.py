@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel, Field
 from fastapi.exceptions import RequestValidationError
-from .config import Settings
+from .config import ApprovalMode, Settings
 from . import __version__
 from .errors import HarnessError
 from .store import Store
@@ -35,6 +35,10 @@ class ExecutionApprovalInput(BaseModel):
 
 class SessionInput(BaseModel):
     title: str = "New task"
+    approval_mode: ApprovalMode | None = None
+
+class ApprovalModeInput(BaseModel):
+    approval_mode: ApprovalMode
 
 class DocumentInput(BaseModel):
     path: str = Field(min_length=1, max_length=4096)
@@ -116,25 +120,35 @@ def create_app(root=None, model_factory=None):
     async def config():
         return settings.public()
 
-    @app.post("/api/models/test")
-    async def test_connection(value: ModelInput):
-        require_idle()
-        cfg = connection_config(value, settings)
+    async def check_connection(cfg, *, brief=False):
+        if cfg.provider == "fake":
+            return {"connected": False, "model": cfg.model, "message": "Offline demo"}
         cfg.secret()
-        # One real, bounded request to the supplied endpoint; never saves a draft.
         cfg.max_retries, cfg.timeout = 0, min(cfg.timeout, 30)
+        if brief:
+            cfg.max_tokens = min(cfg.max_tokens, 256)
         checks = [{"phase":"validated", "message":"Endpoint and credentials are configured"}]
-        async def ignore(kind, data):
+        async def observe(kind, data):
             if kind == "communication":
                 checks.append(data)
         started = time.monotonic()
         client = (model_factory or ModelClient)(cfg)
-        reply = await client.complete([{"role": "user", "content": "Reply with OK."}], [], ignore, tools=False)
-        if not reply.get("content"):
+        reply = await client.complete([{"role": "user", "content": "Reply with OK."}], [], observe, tools=False)
+        if not reply.get("content") and not (brief and reply.get("_reasoning")):
             raise HarnessError("invalid_model_response", "The endpoint did not return a text response.", "model")
         return {"connected": True, "model": cfg.model, "endpoint": cfg.url(),
                 "elapsed_ms": round((time.monotonic()-started)*1000), "message": "Connection successful",
                 "checks": checks + [{"phase":"verified", "message":"Valid model reply received"}]}
+
+    @app.post("/api/models/test")
+    async def test_connection(value: ModelInput):
+        require_idle()
+        return await check_connection(connection_config(value, settings))
+
+    @app.post("/api/models/{model_id}/check")
+    async def check_saved_model(model_id: str):
+        require_idle()
+        return await check_connection(settings.model(model_id), brief=True)
 
     @app.post("/api/models/discover")
     async def model_list(value: ModelInput):
@@ -194,11 +208,17 @@ def create_app(root=None, model_factory=None):
 
     @app.post("/api/sessions")
     async def new_session(value: SessionInput):
-        return store.create_session(value.title)
+        return store.create_session(value.title, value.approval_mode)
 
     @app.get("/api/sessions/{session_id}")
     async def session(session_id: str):
         return {**store.session(session_id), "runs":store.runs(session_id)}
+
+    @app.post("/api/sessions/{session_id}/approval-mode")
+    async def set_approval_mode(session_id: str, value: ApprovalModeInput):
+        require_idle()
+        store.set_approval_mode(session_id, value.approval_mode)
+        return {"approval_mode": value.approval_mode, "allow_all_execution": False}
 
     @app.post("/api/sessions/{session_id}/execution-approval")
     async def execution_approval(session_id: str, value: ExecutionApprovalInput):

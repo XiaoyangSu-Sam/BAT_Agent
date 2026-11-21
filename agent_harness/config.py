@@ -53,6 +53,9 @@ class ModelConfig(BaseModel):
             path += "/chat/completions" if path.endswith("/v1") else "/v1/chat/completions"
         return urlunsplit((p.scheme, p.netloc, path, "", ""))
 
+ApprovalMode = Literal["execution", "all", "trusted"]
+
+
 class ExecutionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     workspace_root: str = "./workspace"
@@ -61,7 +64,7 @@ class ExecutionConfig(BaseModel):
     max_steps: int = Field(default=24, ge=1, le=200)
     max_context_chars: int = Field(default=120000, ge=4000, le=2000000)
     max_output_chars: int = Field(default=16000, ge=1000, le=100000)
-    approval_mode: Literal["execution", "all", "trusted"] = "execution"
+    approval_mode: ApprovalMode = "execution"
 
     def python(self):
         return self.python_executable or sys.executable

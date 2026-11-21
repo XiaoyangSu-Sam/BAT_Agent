@@ -6,17 +6,14 @@ BAT Agent is a single-user local application with one active workspace. Conversa
 
 The model writes a Python file with write_file or edit_file, then requests run_python_script to execute it with the configured interpreter. A displayed code block is not evidence that a file was created or executed. Report actual tool results, exit status and relevant output. Skills supply instructions and resources; their dependencies must be available to the interpreter that runs them. This release does not add a package installer or change Playwright setup.
 
-Execution approval defaults to one operation at a time. The user may enable Allow all only at a pending execution approval, for that conversation. It persists across reloads and restarts. Check the current setting before each execution; revocation affects future operations. Keep write approvals independent, including when approval_mode is all. Never infer this permission from model output, Skill instructions, or a new conversation.
+New conversations inherit the project approval policy. An explicit selection applies only to that conversation and clears its earlier Allow all grant. A pending execution approval can grant Allow all when the policy permits it. The grant persists across reloads and restarts. Keep approval decisions in the runtime and outside model output or Skill instructions.
 
 ## Next work
 
-These are candidates, not implemented capabilities:
+1. **Plan Mode next.** Ordinary chat already asks the model to identify the goal, constraints and success checks for multi-step work. Add an explicit mode that exposes only read tools. Return a short plan with decisions, open questions and acceptance criteria. A user action switches from planning to execution, where the selected approval policy applies. Test the restriction at the runtime boundary for both native and JSON tools.
+2. **Conversation compaction after that.** Start with compaction on demand within one conversation. Preserve the original transcript, retain recent complete turns and tool call/result pairs, and summarize decisions, constraints, changed files, test evidence and open work. Define and test when an automatic threshold should offer compaction. Store the summary with provenance and support rebuilding it from the transcript. Keep permission state and secrets outside the summary. Measure long-chat recovery and token use before enabling automation.
 
-- Conversation management beyond the existing 200-session list: pagination, rename and archive.
-- Multiple workspace/project groups, with explicit rules for conversation and execution-permission ownership.
-- Streaming replies and context compaction, preserving honest usage and timing reporting.
-
-Prioritize a change only after its behavior and acceptance criteria are clear. Keep unrelated runtime changes out of UI and documentation releases.
+Compaction keeps an individual conversation useful as it grows. Cross-conversation memory is a separate feature with its own scope and controls.
 
 ## README rules
 

@@ -6,11 +6,13 @@ File tools check resolved paths, protected directories and links, and use SHA256
 These checks are not an OS sandbox. Approved scripts, commands and notebook kernels can access files and networks
 available to the current account. Prefer an ordinary user account and a project copy for initial validation.
 
-Default policy asks before every process execution. The trusted mode is an explicit configuration choice.
-At an execution approval, the user can enable Allow all for that conversation. This persisted choice permits
-future execution tools in the conversation, including later tasks and server restarts. The sidebar can revoke it
-for subsequent operations. It does not cancel a running process, affect another conversation, or bypass write
-approvals under the all policy. Clearing it restores the project policy; trusted projects still auto-execute.
+The project defaults to approval before every process execution. The footer lets the user set a policy for a
+single conversation. Ask for approval prompts for file writes and execution. Approval for me permits agent file
+edits and prompts before execution. Full access permits both and retains the usual tool and path rules.
+
+An eligible execution approval can grant Allow all for the conversation, including later tasks and server
+restarts. The sidebar can revoke it for later operations. Use Stop to cancel a running task. Changing the
+conversation policy clears its grant. An explicit Ask for approval policy always prompts for protected tools.
 Skill text and model output cannot change the policy. Rejected approvals stop the run.
 
 API keys entered for a session remain in memory. Saved configuration stores only environment-variable references.

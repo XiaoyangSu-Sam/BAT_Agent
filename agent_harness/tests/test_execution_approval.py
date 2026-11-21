@@ -115,3 +115,49 @@ def test_reset_endpoint_cannot_grant_permissions_without_pending_approval(settin
         client.app.state.store.set_execution_approval(session["id"], True)
         assert client.post(path, json={"allow_all": False}).json()["allow_all_execution"] is False
         assert not client.app.state.store.execution_allowed(session["id"])
+
+
+def test_explicit_approval_modes_override_project_policy_and_keep_chat_scope(settings, skills):
+    settings.execution.approval_mode = "execution"
+    store = Store(settings.state_dir / "runs.sqlite3")
+    manager = RunManager(settings, store, skills)
+    strict = store.create_session(approval_mode="all")
+    full = store.create_session(approval_mode="trusted")
+    inherited = store.create_session()
+
+    async def scenario():
+        key = manager.start(strict["id"], "Write and run a script")
+        write_approval = await wait_approval(manager, key)
+        assert not (settings.workspace / "demo_hello.py").exists()
+        manager.decide(key, write_approval, True)
+        for _ in range(100):
+            await asyncio.sleep(0.01)
+            current = manager.approvals.get(key)
+            if current and current[0] != write_approval:
+                execute_approval = current[0]
+                break
+        else:
+            pytest.fail("Expected an execution approval after approving the write")
+        with pytest.raises(HarnessError, match="Allow all"):
+            manager.decide(key, execute_approval, True, True)
+        manager.decide(key, execute_approval, False)
+        await manager.tasks[key]
+
+        key = manager.start(full["id"], "Write and run a script")
+        await asyncio.wait_for(manager.tasks[key], 10)
+        assert store.run(key)["status"] == "completed"
+        assert not any(e["type"] == "approval_required" for e in store.run(key)["events"])
+
+        key = manager.start(inherited["id"], "Write and run a script")
+        approval = await wait_approval(manager, key)
+        events = [e for e in store.run(key)["events"] if e["type"] == "approval_required"]
+        assert [e["data"]["kind"] for e in events] == ["execute"]
+        manager.decide(key, approval, True, True)
+        await manager.tasks[key]
+
+    asyncio.run(scenario())
+    store.set_approval_mode(inherited["id"], "all")
+    reopened = Store(store.path)
+    assert reopened.session(inherited["id"])["approval_mode"] == "all"
+    assert not reopened.execution_allowed(inherited["id"])
+    assert reopened.session(full["id"])["approval_mode"] == "trusted"

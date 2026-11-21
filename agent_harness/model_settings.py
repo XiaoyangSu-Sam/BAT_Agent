@@ -23,6 +23,7 @@ class ModelInput(BaseModel):
     connect_timeout: float = Field(default=10, gt=0, le=120)
     max_retries: int = Field(default=2, ge=0, le=5)
     max_tokens: int = Field(default=4096, gt=0, le=131072)
+    create_only: bool = False
 
     @field_validator("endpoint", "model", mode="before")
     @classmethod
@@ -49,6 +50,8 @@ def connection_config(value, settings=None):
 
 
 def save_model(settings, value):
+    if value.create_only and value.id in settings.models:
+        raise HarnessError("connection_exists", "Choose a unique connection name.", "configuration")
     cfg = connection_config(value, settings)
     path = settings.root / "config/environment.yaml"
     data = read_yaml(path)
